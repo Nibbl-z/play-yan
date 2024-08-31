@@ -8,7 +8,7 @@ require "yan"
 require "biribiri"
 
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
-local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false}
+local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local jumpSpeed = 0.15
 local currentMedia = 1
 
@@ -18,11 +18,21 @@ local media = {
     {
         name = "thisfolder",
         files = {
-            "song2.mp3",
-            "song3.mp3"
+            {
+                name = "song3.mp3",
+                type = "file",
+                sprite = "img/music.png"
+            },
+            
+            {
+                name = "song2534.mp3",
+                type = "file",
+                sprite = "img/music.png"
+            }
         },
         type = "folder",
-        sprite = "img/door.png"
+        sprite = "img/door.png",
+        isRoot = false
     },
     {
         name = "song.mp3",
@@ -31,6 +41,30 @@ local media = {
     }
 }
 
+function UnrootMedia(folder)
+    for _, v in ipairs(folder) do
+        if v.isRoot == true then
+            v.isRoot = false
+        end
+        
+        if v.files ~= nil then
+            UnrootMedia(v.files)
+        end
+    end
+end
+
+function GetMediaFolder()
+    local m
+    
+    for _, v in ipairs(media) do
+        print(v.name)
+        if v.isRoot == true then
+            m = v.files
+        end
+    end
+    
+    return m or media
+end
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -52,16 +86,16 @@ function love.load()
     end)
     
     doorEnterTimer = biribiri:CreateTimer(0.2, function ()
-        media[currentMedia].sprite = "img/door_whoosh.png"
+        GetMediaFolder()[currentMedia].sprite = "img/door_whoosh.png"
         playyan.Visible = false
     end)
     
     doorUnwhooshTimer = biribiri:CreateTimer(0.35, function ()
-        media[currentMedia].sprite = "img/door_open.png"
+        GetMediaFolder()[currentMedia].sprite = "img/door_open.png"
     end)
     
     doorCloseTimer = biribiri:CreateTimer(0.45, function ()
-        media[currentMedia].sprite = "img/door.png"
+        GetMediaFolder()[currentMedia].sprite = "img/door.png"
     end)
     
     backdoorSpinAnim = biribiri:CreateAndStartTimer(0.06, function ()
@@ -112,15 +146,18 @@ function love.keypressed(key)
     elseif key == "space" then
         if playyan.Moving then return end
         
-        if media[currentMedia].type == "folder" then
+        if GetMediaFolder()[currentMedia].type == "folder" then
             playyan.Direction = 1
             playyan.Moving = true
-            media[currentMedia].sprite = "img/door_open.png"
+            GetMediaFolder()[currentMedia].sprite = "img/door_open.png"
             doorEnterTimer:Start()
             doorUnwhooshTimer:Start()
             doorCloseTimer:Start()
 
             biribiri:CreateAndStartTimer(1, function ()
+                UnrootMedia(media)
+                GetMediaFolder()[currentMedia].isRoot = true
+
                 fading = true
                 backdoor.Visible = true
                 biribiri:CreateAndStartTimer(0.5, function()
@@ -144,8 +181,28 @@ function love.keypressed(key)
                     end)
                 end)
             end)
-        
         end
+    elseif key == "w" then
+        playyan.Moving = true
+        playyan.Direction = -1
+        
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X - stairWidth - 7}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadOut), {Y = playyan.Y - 48}):Play()
+
+        biribiri:CreateAndStartTimer(jumpSpeed, function ()
+            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 20}):Play()
+        end)
+
+        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.3, function ()
+            playyan.Visible = false
+            backdoor.Whoosh = true
+        end)
+        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.4, function ()
+            backdoor.Whoosh = false
+        end)
+        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.5, function ()
+            fading = true
+        end)
     end
 end
 
@@ -180,18 +237,24 @@ function love.draw()
         )
     end
     love.graphics.setColor(1,1,1)
-    for i, file in ipairs(media) do
+
+    local m = GetMediaFolder()
+
+    for i, file in ipairs(m) do
         love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
         
         love.graphics.print(file.name, 15 + ((i + 3) * stairWidth) + stairWidth + 5, height - ((i + 3) * stairHeight) - 33)
     end
     if backdoor.Visible then
         love.graphics.draw(assets["img/backdoor_"..tostring(backdoor.Index)..".png"], backdoor.X + 6, backdoor.Y + 8)
+
+        if backdoor.Whoosh == true then
+            love.graphics.draw(assets["img/backdoor_whoosh.png"], backdoor.X + 6, backdoor.Y + 8)
+        end
     end
     if playyan.Visible then
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
-    
     
     
     
