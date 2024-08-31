@@ -13,8 +13,13 @@ local jumpSpeed = 0.15
 local currentMedia = 1
 
 local loading = false
-
+local folderIndex = 1
 local media = {
+    {
+        name = "song.mp3",
+        type = "file",
+        sprite = "img/music.png"
+    },
     {
         name = "thisfolder",
         files = {
@@ -33,12 +38,8 @@ local media = {
         type = "folder",
         sprite = "img/door.png",
         isRoot = false
-    },
-    {
-        name = "song.mp3",
-        type = "file",
-        sprite = "img/music.png"
-    }
+    } 
+    
 }
 
 function UnrootMedia(folder)
@@ -145,8 +146,9 @@ function love.keypressed(key)
         playyan.Direction = 1
     elseif key == "space" then
         if playyan.Moving then return end
-        
+        if GetMediaFolder()[currentMedia] == nil then return end
         if GetMediaFolder()[currentMedia].type == "folder" then
+            folderIndex = currentMedia
             playyan.Direction = 1
             playyan.Moving = true
             GetMediaFolder()[currentMedia].sprite = "img/door_open.png"
@@ -161,10 +163,18 @@ function love.keypressed(key)
                 fading = true
                 backdoor.Visible = true
                 biribiri:CreateAndStartTimer(0.5, function()
+                    currentMedia = 1
                     fading = false
                     playyan.Visible = true
+
+                    backdoor.X = 121 - 50
+                    backdoor.Y = 58 - 50 
+                    
                     playyan.X = backdoor.X + 20
                     playyan.Y = backdoor.Y + 22
+                    
+                    camera.X = 0
+                    camera.Y = 0
                     
                     biribiri:CreateAndStartTimer(0.7, function ()
                         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X + stairWidth + 6}):Play()
@@ -183,6 +193,9 @@ function love.keypressed(key)
             end)
         end
     elseif key == "w" then
+        if backdoor.Visible == false then return end
+        if playyan.Moving then return end
+
         playyan.Moving = true
         playyan.Direction = -1
         
@@ -192,7 +205,7 @@ function love.keypressed(key)
         biribiri:CreateAndStartTimer(jumpSpeed, function ()
             yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 20}):Play()
         end)
-
+        
         biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.3, function ()
             playyan.Visible = false
             backdoor.Whoosh = true
@@ -202,6 +215,29 @@ function love.keypressed(key)
         end)
         biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.5, function ()
             fading = true
+            UnrootMedia(media)
+            
+            biribiri:CreateAndStartTimer(0.5, function ()
+                playyan.Visible = true
+                playyan.Moving = false
+                backdoor.Visible = false
+                backdoor.Whoosh = false
+                fading = false
+                
+                media[folderIndex].sprite = "img/door_open.png"
+                
+                currentMedia = folderIndex
+                
+                playyan.X = 121 + (stairWidth * (folderIndex - 1))
+                playyan.Y = 58 - (stairHeight * (folderIndex - 1))
+                
+                camera.X = 0 - (stairWidth * (folderIndex - 1))
+                camera.Y = 0 + (stairHeight * (folderIndex - 1))
+            end)
+            
+            biribiri:CreateAndStartTimer(0.7, function ()
+                media[folderIndex].sprite = "img/door.png"
+            end)
         end)
     end
 end
