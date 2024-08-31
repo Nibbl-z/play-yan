@@ -1,21 +1,32 @@
 local width, height = 240, 160
 local camera = {X = 0, Y = 0}
 
-local stairHeight, stairWidth = 16, 24
+local stairHeight, stairWidth = 17, 25
+local stairXOffset, stairYOffset = 15, 0
 
 require "yan"
 require "biribiri"
 
-local playyan = {X = 116, Y = 63, Sprite = "img/yan_stand.png", Moving = false, Direction = 1}
+local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1}
 local jumpSpeed = 0.15
 
+local media = {
+    {
+        name = "thisfolder",
+        files = {
+            "song2.mp3",
+            "song3.mp3"
+        }
+    },
+    "song1.mp3"
+}
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     love.window.setMode(720, 480)
     
     biribiri:LoadSprites("img")
-
+    
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
         playyan.Sprite = "img/yan_stand.png"  
         playyan.Moving = false
@@ -31,6 +42,7 @@ function love.load()
 end
 
 function love.keypressed(key)
+
     if key == "a" then
         if playyan.Moving then return end
         playyan.Moving = true
@@ -38,7 +50,7 @@ function love.keypressed(key)
         playyan.Sprite = "img/yan_jump.png"
         unjumpTimer:Start()
         
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X - 24}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X - stairWidth}):Play()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 10}):Play()
         yanDownTimer:Start()
 
@@ -51,7 +63,7 @@ function love.keypressed(key)
         playyan.Sprite = "img/yan_jump.png"
         unjumpTimer:Start()
         
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + 24}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
         yanUpTimer:Start()
 
@@ -72,19 +84,28 @@ function love.draw()
     
     for i = 1, 100 do
         love.graphics.line(
-            15 + ((i - 1) * stairWidth), 
+            stairXOffset + ((i - 1) * stairWidth), 
             height - ((i - 1) * stairHeight), 
-            15 + ((i - 1) * stairWidth), 
+            stairXOffset + ((i - 1) * stairWidth), 
             height - stairHeight - ((i - 1) * stairHeight)
         )
         love.graphics.line(
-            15 + ((i - 1) * stairWidth), 
+            stairXOffset + ((i - 1) * stairWidth), 
             height - stairHeight - ((i - 1) * stairHeight), 
-            15 + stairWidth + ((i - 1) * stairWidth), 
+            stairXOffset + stairWidth + ((i - 1) * stairWidth), 
             height - stairHeight - ((i - 1) * stairHeight)
         )
     end
     love.graphics.setColor(1,1,1)
+    for i, file in ipairs(media) do
+        local sprite = (file.name == nil) and "img/music.png" or "img/door.png"
+        
+        love.graphics.draw(assets[sprite], 15 + ((i - 1) * stairWidth), height - ((i - 1) * stairHeight) - 39)
+        
+        love.graphics.print(file.name or file, 15 + ((i - 1) * stairWidth) + stairWidth + 5, height - ((i - 1) * stairHeight) - 33)
+    end
+    
+    
     love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     
     love.graphics.pop()
