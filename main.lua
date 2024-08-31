@@ -15,6 +15,41 @@ local currentMedia = 1
 local loading = false
 local folderIndex = 1
 local media = {
+
+}
+function LoadMusicFolder(folder, doReturn)
+    local files = {}
+
+    for _, file in ipairs(love.filesystem.getDirectoryItems(folder)) do
+        local info = love.filesystem.getInfo(folder.."/"..file)
+        
+        if info.type == "file" then
+            table.insert(files, {
+                name = file,
+                type = "file",
+                sprite = "img/music.png"
+            })
+        elseif info.type == "directory" and not doReturn then
+            table.insert(files, {
+                name = file,
+                type = "folder",
+                sprite = "img/door.png",
+                files = LoadMusicFolder(folder.."/"..file, true),
+                isRoot = false
+            })
+        end
+    end
+
+    if doReturn then return files end
+
+    for _, v in ipairs(files) do
+        table.insert(media, v)
+    end
+end
+
+
+
+local we = {
     {
         name = "song.mp3",
         type = "file",
@@ -68,9 +103,11 @@ function GetMediaFolder()
 end
 
 function love.load()
+    love.filesystem.setIdentity("play-yan")
+    love.filesystem.createDirectory("music")
     love.graphics.setDefaultFilter('nearest', 'nearest')
     love.window.setMode(720, 480)
-    
+    LoadMusicFolder("music")
     biribiri:LoadSprites("img")
     
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
