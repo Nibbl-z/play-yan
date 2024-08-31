@@ -8,6 +8,7 @@ require "yan"
 require "biribiri"
 
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
+local backdoor = {X = 100, Y = 100, Index = 1}
 local jumpSpeed = 0.15
 local currentMedia = 1
 
@@ -27,6 +28,7 @@ local media = {
         sprite = "img/music.png"
     }
 }
+
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -51,7 +53,7 @@ function love.load()
         media[currentMedia].sprite = "img/door_whoosh.png"
         playyan.Visible = false
     end)
-
+    
     doorUnwhooshTimer = biribiri:CreateTimer(0.35, function ()
         media[currentMedia].sprite = "img/door_open.png"
     end)
@@ -59,6 +61,13 @@ function love.load()
     doorCloseTimer = biribiri:CreateTimer(0.45, function ()
         media[currentMedia].sprite = "img/door.png"
     end)
+    
+    backdoorSpinAnim = biribiri:CreateAndStartTimer(0.06, function ()
+        backdoor.Index = backdoor.Index + 1
+        if backdoor.Index == 7 then
+            backdoor.Index = 1
+        end
+    end, true)
 end
 
 function love.keypressed(key)
@@ -144,6 +153,7 @@ function love.draw()
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
     
+    love.graphics.draw(assets["img/backdoor_"..tostring(backdoor.Index)..".png"], backdoor.X + 6, backdoor.Y + 8)
     
     love.graphics.pop()
 end
