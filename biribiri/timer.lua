@@ -31,7 +31,7 @@ end
 ---@return nil
 function timer:Start()
     if self.Started == true then return end
-    
+    self.Finished = false
     self.Started = true
     self.StartTime = love.timer.getTime()
 end
