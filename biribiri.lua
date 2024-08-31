@@ -268,7 +268,7 @@ end
 --- Loads a folder of fonts into the global `assets` table.
 ---@param directory string The directory to load fonts from
 ---@param size? number Size for the font
-function biribiri:LoadAudio(directory, size)
+function biribiri:LoadFonts(directory, size)
     LoadFontFolder(directory, size)
 end
 

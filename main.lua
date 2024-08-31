@@ -9,6 +9,7 @@ require "biribiri"
 
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
+local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
 local jumpSpeed = 0.15
 local currentMedia = 1
 
@@ -17,6 +18,11 @@ local folderIndex = 1
 local media = {
 
 }
+
+local isPlaying = false
+
+local currentSong = nil
+
 function LoadMusicFolder(folder, doReturn)
     local files = {}
 
@@ -26,6 +32,7 @@ function LoadMusicFolder(folder, doReturn)
         if info.type == "file" then
             table.insert(files, {
                 name = file,
+                path = folder.."/"..file,
                 type = "file",
                 sprite = "img/music.png"
             })
@@ -108,6 +115,7 @@ function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     love.window.setMode(720, 480)
     LoadMusicFolder("music")
+    biribiri:LoadAudio("music", "stream")
     biribiri:LoadSprites("img")
     
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
@@ -142,6 +150,10 @@ function love.load()
             backdoor.Index = 1
         end
     end, true)
+
+    speechBubbleSwap = biribiri:CreateAndStartTimer(0.5, function ()
+        speechBubble.Mode = not speechBubble.Mode
+    end, true)
 end
 
 function love.keypressed(key)
@@ -150,7 +162,15 @@ function love.keypressed(key)
         if playyan.Moving then return end
 
         currentMedia = currentMedia - 1
-
+        
+        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+            if currentSong ~= nil then
+                currentSong:stop()
+            end
+            currentSong = assets[GetMediaFolder()[currentMedia].path]
+            currentSong:play()
+        end
+        
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X + stairWidth, Y = camera.Y - stairHeight}):Play()
         yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X - stairWidth, Y = backdoor.Y + stairHeight}):Play()
@@ -167,6 +187,14 @@ function love.keypressed(key)
         if playyan.Moving then return end
         
         currentMedia = currentMedia + 1
+        
+        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+            if currentSong ~= nil then
+                currentSong:stop()
+            end
+            currentSong = assets[GetMediaFolder()[currentMedia].path]
+            currentSong:play()
+        end
 
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
@@ -184,7 +212,17 @@ function love.keypressed(key)
     elseif key == "space" then
         if playyan.Moving then return end
         if GetMediaFolder()[currentMedia] == nil then return end
-        if GetMediaFolder()[currentMedia].type == "folder" then
+        
+        if GetMediaFolder()[currentMedia].type == "file" then
+            isPlaying = not isPlaying
+            if currentSong ~= nil then
+                currentSong:stop()
+                if not isPlaying then return end
+            end
+            currentSong = assets[GetMediaFolder()[currentMedia].path]
+            currentSong:play()
+            
+        elseif GetMediaFolder()[currentMedia].type == "folder" then
             folderIndex = currentMedia
             playyan.Direction = 1
             playyan.Moving = true
@@ -282,6 +320,15 @@ end
 function love.update(dt)
     yan:Update(dt)
     biribiri:Update(dt)
+    
+    speechBubble.X = playyan.X - 12
+    speechBubble.Y = playyan.Y - 9
+
+    if speechBubble.Mode then
+        speechBubble.Sprite = "img/speech_empty.png"
+    else
+        speechBubble.Sprite = "img/speech_note.png"
+    end
 end
 
 function love.draw()
@@ -329,7 +376,9 @@ function love.draw()
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
     
-    
+    if speechBubble.Visible and (not playyan.Moving and isPlaying) then
+        love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
+    end
     
     love.graphics.pop()
 end
