@@ -113,8 +113,8 @@ end
 function WarpUp()
     yan:NewTween(camera, yan:TweenInfo(2, EasingStyle.QuadInOut), {X = -((#GetMediaFolder() - 1) * stairWidth), Y = ((#GetMediaFolder() - 1) * stairHeight)}):Play()
     yan:NewTween(backdoor, yan:TweenInfo(2, EasingStyle.QuadInOut), 
-    {X = 121 + (#GetMediaFolder() * stairWidth - 50), 
-    Y = 58 - (#GetMediaFolder() * stairHeight) - 50}):Play()
+    {X = 121 + ((#GetMediaFolder() - 1) * stairWidth - 50), 
+    Y = 58 - ((#GetMediaFolder() - 1) * stairHeight) - 50}):Play()
     biribiri:CreateAndStartTimer(2, function ()
         playyan.X = 121 + (#GetMediaFolder() * stairWidth)
         playyan.Y = 58 - (#GetMediaFolder() * stairHeight)
@@ -198,7 +198,7 @@ function love.load()
     speechBubbleSwap = biribiri:CreateAndStartTimer(0.5, function ()
         speechBubble.Mode = not speechBubble.Mode
         isDarkened = not isDarkened
-
+        
         flashProgress = true
         biribiri:CreateAndStartTimer(0.1, function ()
             flashProgress = false
@@ -417,8 +417,14 @@ function love.draw()
     if isPlaying and currentSong ~= nil then
         stars:Draw(camera.X, camera.Y)
     end
+    
+    love.graphics.setColor(0,0,0.8)
+    love.graphics.rectangle("fill", 
+    10 + ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairWidth) + stairWidth + 5, 
+    height - ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairHeight) - 34, 500, stairHeight)
     love.graphics.setColor(0,1,1)
     
+
     for i = -10, 100 do
         love.graphics.line(
             stairXOffset + ((i - 1) * stairWidth), 
@@ -436,7 +442,7 @@ function love.draw()
     love.graphics.setColor(1,1,1)
 
     local m = GetMediaFolder()
-
+    
     for i, file in ipairs(m) do
         love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
         
@@ -451,7 +457,13 @@ function love.draw()
         if backdoor.Whoosh == true then
             love.graphics.draw(assets["img/backdoor_whoosh.png"], backdoor.X + 6, backdoor.Y + 8)
         end
+        
+        love.graphics.draw(assets["img/guy.png"], 7 + ((#m + 6) * stairWidth), height - ((#m + 6) * stairHeight) - 33)
     end
+
+    
+
+
     if playyan.Visible then
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
