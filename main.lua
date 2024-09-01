@@ -429,7 +429,7 @@ function love.draw()
     end
     
     
-
+    
     for i = -10, 100 do
         love.graphics.line(
             stairXOffset + ((i - 1) * stairWidth), 
@@ -472,9 +472,10 @@ function love.draw()
     if playyan.Visible then
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
-    
-    love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
-    love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
+    if #GetMediaFolder() > 0 then
+        love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
+        love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
+    end
     
     if speechBubble.Visible and (not playyan.Moving and isPlaying) then
         love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
