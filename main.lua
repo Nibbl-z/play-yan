@@ -154,7 +154,7 @@ function love.load()
 end
 
 function love.keypressed(key)
-
+    
     if key == "a" then
         if playyan.Moving then return end
         
@@ -412,4 +412,22 @@ function love.draw()
     end
     
     love.graphics.pop()
+end
+
+function love.filedropped(file)
+    file:open("r")
+	local data = file:read()
+    
+    local t={}
+    for str in string.gmatch(file:getFilename(), "([^".."\\".."]+)") do
+        table.insert(t, str)
+    end
+    
+    fileName = t[#t]
+    
+    love.filesystem.write("music/"..fileName, data)
+    
+    table.clear(media)
+    LoadMusicFolder("music")
+    biribiri:LoadAudio("music", "stream")
 end
