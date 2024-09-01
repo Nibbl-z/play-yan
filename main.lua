@@ -10,6 +10,10 @@ require "biribiri"
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
+
+local playbackState = "play"
+local isDarkened = false
+
 local jumpSpeed = 0.15
 local currentMedia = 1
 
@@ -100,7 +104,6 @@ function GetMediaFolder()
     local m
     
     for _, v in ipairs(media) do
-        print(v.name)
         if v.isRoot == true then
             m = v.files
         end
@@ -110,9 +113,12 @@ function GetMediaFolder()
 end
 
 function love.load()
+    
+
     love.filesystem.setIdentity("play-yan")
     love.filesystem.createDirectory("music")
     love.graphics.setDefaultFilter('nearest', 'nearest')
+    love.graphics.setFont(love.graphics.newFont("W95FA.otf", 14, "mono"))
     love.window.setMode(720, 480)
     LoadMusicFolder("music")
     biribiri:LoadAudio("music", "stream")
@@ -153,6 +159,7 @@ function love.load()
 
     speechBubbleSwap = biribiri:CreateAndStartTimer(0.5, function ()
         speechBubble.Mode = not speechBubble.Mode
+        isDarkened = not isDarkened
     end, true)
 end
 
@@ -160,15 +167,16 @@ function love.keypressed(key)
 
     if key == "a" then
         if playyan.Moving then return end
-
-        currentMedia = currentMedia - 1
         
-        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
-            if currentSong ~= nil then
-                currentSong:stop()
+        currentMedia = currentMedia - 1
+        if GetMediaFolder()[currentMedia] ~= nil then 
+            if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+                if currentSong ~= nil then
+                    currentSong:stop()
+                end
+                currentSong = assets[GetMediaFolder()[currentMedia].path]
+                currentSong:play()
             end
-            currentSong = assets[GetMediaFolder()[currentMedia].path]
-            currentSong:play()
         end
         
         playyan.Moving = true
@@ -187,14 +195,16 @@ function love.keypressed(key)
         if playyan.Moving then return end
         
         currentMedia = currentMedia + 1
-        
-        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
-            if currentSong ~= nil then
-                currentSong:stop()
+        if GetMediaFolder()[currentMedia] ~= nil then 
+            if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+                if currentSong ~= nil then
+                    currentSong:stop()
+                end
+                currentSong = assets[GetMediaFolder()[currentMedia].path]
+                currentSong:play()
             end
-            currentSong = assets[GetMediaFolder()[currentMedia].path]
-            currentSong:play()
         end
+        
 
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
@@ -378,6 +388,30 @@ function love.draw()
     
     if speechBubble.Visible and (not playyan.Moving and isPlaying) then
         love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
+    end
+    
+    if isPlaying and currentSong ~= nil then
+        print(playbackState..(isDarkened and "_darkened.png" or ".png"))
+        love.graphics.draw(assets["img/"..playbackState..(isDarkened and "_darkened.png" or ".png")], 30 - camera.X, 60 - camera.Y)
+        
+        love.graphics.draw(assets["img/bottom_gradient.png"], 0 - camera.X, height - 50 - camera.Y, 0, 2, 1)
+        
+        local seconds = math.floor(currentSong:tell("seconds"))
+        if seconds < 10 then
+            seconds = "0"..tostring(seconds)
+        end
+
+        local minutes = math.floor(currentSong:tell("seconds") / 60)
+        if minutes < 10 then
+            minutes = "0"..tostring(minutes)
+        end
+
+        local hours = math.floor(currentSong:tell("seconds") / 3600 )-- dude whos listening to hour long audio on my playyan media player
+        if hours < 10 then
+            hours = "0"..tostring(hours)
+        end
+        
+        love.graphics.printf(hours..":"..minutes..":"..seconds, width - 105 - camera.X, 98 - camera.Y, 100, "right")
     end
     
     love.graphics.pop()
