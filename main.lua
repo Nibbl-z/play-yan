@@ -10,6 +10,9 @@ require "biribiri"
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
+
+local stars = require("stars")
+
 local car = {X = -20}
 local fish = {X = 0}
 
@@ -86,6 +89,7 @@ function GetMediaFolder()
 end
 
 function love.load()
+    stars:Init()
     love.filesystem.setIdentity("play-yan")
     love.filesystem.createDirectory("music")
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -337,12 +341,16 @@ function love.draw()
     love.graphics.push()
     love.graphics.scale(3, 3)
     love.graphics.translate(camera.X, camera.Y)
-    love.graphics.setColor(0,1,1)
-    
     if fading then
         love.graphics.pop()
         return
     end
+    if isPlaying and currentSong ~= nil then
+        stars:Draw(camera.X, camera.Y)
+    end
+    love.graphics.setColor(0,1,1)
+    
+    
     
     for i = -10, 100 do
         love.graphics.line(
