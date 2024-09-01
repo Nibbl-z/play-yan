@@ -89,15 +89,15 @@ function GetMediaFolder()
 end
 
 function Warp()
-    yan:NewTween(camera, yan:TweenInfo(2), {X = 0, Y = 0}):Play()
-    
+    yan:NewTween(camera, yan:TweenInfo(2, EasingStyle.QuadInOut), {X = 0, Y = 0}):Play()
+    yan:NewTween(backdoor, yan:TweenInfo(2, EasingStyle.QuadInOut), {X = 121 - 50, Y = 58 - 50}):Play()
     biribiri:CreateAndStartTimer(2, function ()
         playyan.X = 121 - stairWidth
         playyan.Y = 58 + stairHeight
         playyan.Visible = true
         playyan.Moving = false
         currentMedia = 1
-
+        
         playyan.Sprite = "img/yan_jump.png"
         unjumpTimer:Start()
         
@@ -111,23 +111,25 @@ function Warp()
 end
 
 function WarpUp()
-    yan:NewTween(camera, yan:TweenInfo(2), {X = -(#GetMediaFolder() * stairWidth), Y = (#GetMediaFolder() * stairHeight)}):Play()
-    
+    yan:NewTween(camera, yan:TweenInfo(2, EasingStyle.QuadInOut), {X = -((#GetMediaFolder() - 1) * stairWidth), Y = ((#GetMediaFolder() - 1) * stairHeight)}):Play()
+    yan:NewTween(backdoor, yan:TweenInfo(2, EasingStyle.QuadInOut), 
+    {X = 121 + (#GetMediaFolder() * stairWidth - 50), 
+    Y = 58 - (#GetMediaFolder() * stairHeight) - 50}):Play()
     biribiri:CreateAndStartTimer(2, function ()
-        playyan.X = 121 - (#GetMediaFolder() * stairWidth)
-        playyan.Y = 58 + (#GetMediaFolder() * stairHeight)
+        playyan.X = 121 + (#GetMediaFolder() * stairWidth)
+        playyan.Y = 58 - (#GetMediaFolder() * stairHeight)
         
         playyan.Visible = true
         playyan.Moving = false
         currentMedia = #GetMediaFolder()
-
+        
         playyan.Sprite = "img/yan_jump.png"
         unjumpTimer:Start()
         
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X - stairWidth}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 10}):Play()
         
-        yanUpTimer:Start()
+        yanDownTimer:Start()
         
         playyan.Direction = -1
     end)
@@ -156,7 +158,7 @@ function love.load()
         end
 
         if playyan.WarpingUp then
-            playyan.Warping = false
+            playyan.WarpingUp = false
             playyan.Moving = true
             playyan.Visible = false
             biribiri:CreateAndStartTimer(0.5, WarpUp)
