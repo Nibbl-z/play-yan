@@ -10,6 +10,8 @@ require "biribiri"
 local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
+local car = {X = -20}
+local fish = {X = 0}
 
 local playbackState = "play"
 local isDarkened = false
@@ -84,8 +86,6 @@ function GetMediaFolder()
 end
 
 function love.load()
-    
-
     love.filesystem.setIdentity("play-yan")
     love.filesystem.createDirectory("music")
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -138,6 +138,18 @@ function love.load()
         biribiri:CreateAndStartTimer(0.1, function ()
             flashProgress = false
         end)
+    end, true)
+    yan:NewTween(car, yan:TweenInfo(4), {X = width + 40}):Play()
+    yan:NewTween(fish, yan:TweenInfo(8), {X = width + 40}):Play()
+
+    biribiri:CreateAndStartTimer(8, function ()
+        car.X = -20
+        yan:NewTween(car, yan:TweenInfo(4), {X = width + 40}):Play()
+    end, true)
+    
+    biribiri:CreateAndStartTimer(12, function ()
+        fish.X = -20
+        yan:NewTween(fish, yan:TweenInfo(8), {X = width + 40}):Play()
     end, true)
 end
 
@@ -394,6 +406,9 @@ function love.draw()
         love.graphics.printf(hours..":"..minutes..":"..seconds, width - 105 - camera.X, 98 - camera.Y, 100, "right")
         
         love.graphics.draw(assets[flashProgress and "img/progress_flash.png" or "img/progress.png"], (width * (currentSong:tell("seconds") / currentSong:getDuration("seconds"))) - camera.X, height - 51 - camera.Y )
+        
+        love.graphics.draw(assets["img/car.png"], car.X - camera.X, height - 8 - camera.Y)
+        love.graphics.draw(assets["img/fish.png"], fish.X - camera.X, height - 40 - camera.Y)
     end
     
     love.graphics.pop()
