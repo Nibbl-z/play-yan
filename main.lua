@@ -136,6 +136,8 @@ function WarpUp()
 end
 
 function love.load()
+    love.window.setTitle("Play-Yan")
+    love.window.setIcon(love.image.newImageData("/img/icon.png"))
     stars:Init()
     love.filesystem.setIdentity("play-yan")
     love.filesystem.createDirectory("music")
