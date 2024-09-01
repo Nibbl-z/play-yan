@@ -196,7 +196,7 @@ function love.load()
             backdoor.Index = 1
         end
     end, true)
-
+    
     speechBubbleSwap = biribiri:CreateAndStartTimer(0.5, function ()
         speechBubble.Mode = not speechBubble.Mode
         isDarkened = not isDarkened
@@ -420,11 +420,14 @@ function love.draw()
         stars:Draw(camera.X, camera.Y)
     end
     
-    love.graphics.setColor(0,0,0.8)
-    love.graphics.rectangle("fill", 
-    10 + ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairWidth) + stairWidth + 5, 
-    height - ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairHeight) - 34, 500, stairHeight)
-    love.graphics.setColor(0,1,1)
+    if #GetMediaFolder() > 0 then
+        love.graphics.setColor(0,0,0.8)
+        love.graphics.rectangle("fill", 
+        10 + ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairWidth) + stairWidth + 5, 
+        height - ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairHeight) - 34, 500, stairHeight)
+        love.graphics.setColor(0,1,1)
+    end
+    
     
 
     for i = -10, 100 do
