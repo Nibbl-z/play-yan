@@ -236,7 +236,7 @@ function love.keypressed(key)
             end
         end
 
-        if currentMedia == 0 then
+        if currentMedia == 0 and #GetMediaFolder() > 0 then
             playyan.WarpingUp = true
         end
 
@@ -269,7 +269,7 @@ function love.keypressed(key)
         end
         playbackState = "ff"
 
-        if currentMedia == #GetMediaFolder() + 1 then
+        if currentMedia == #GetMediaFolder() + 1 and #GetMediaFolder() > 0 then
             playyan.Warping = true
         end
         
