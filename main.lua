@@ -7,7 +7,7 @@ local stairXOffset, stairYOffset = 15, 0
 require "yan"
 require "biribiri"
 
-local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true}
+local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true, Warping = false}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
 
@@ -88,6 +88,51 @@ function GetMediaFolder()
     return m or media
 end
 
+function Warp()
+    yan:NewTween(camera, yan:TweenInfo(2), {X = 0, Y = 0}):Play()
+    
+    biribiri:CreateAndStartTimer(2, function ()
+        playyan.X = 121 - stairWidth
+        playyan.Y = 58 + stairHeight
+        playyan.Visible = true
+        playyan.Moving = false
+        currentMedia = 1
+
+        playyan.Sprite = "img/yan_jump.png"
+        unjumpTimer:Start()
+        
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
+        
+        yanUpTimer:Start()
+        
+        playyan.Direction = 1
+    end)
+end
+
+function WarpUp()
+    yan:NewTween(camera, yan:TweenInfo(2), {X = -(#GetMediaFolder() * stairWidth), Y = (#GetMediaFolder() * stairHeight)}):Play()
+    
+    biribiri:CreateAndStartTimer(2, function ()
+        playyan.X = 121 - (#GetMediaFolder() * stairWidth)
+        playyan.Y = 58 + (#GetMediaFolder() * stairHeight)
+        
+        playyan.Visible = true
+        playyan.Moving = false
+        currentMedia = #GetMediaFolder()
+
+        playyan.Sprite = "img/yan_jump.png"
+        unjumpTimer:Start()
+        
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
+        
+        yanUpTimer:Start()
+        
+        playyan.Direction = -1
+    end)
+end
+
 function love.load()
     stars:Init()
     love.filesystem.setIdentity("play-yan")
@@ -102,6 +147,20 @@ function love.load()
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
         playyan.Sprite = "img/yan_stand.png"  
         playyan.Moving = false
+        
+        if playyan.Warping then
+            playyan.Warping = false
+            playyan.Moving = true
+            playyan.Visible = false
+            biribiri:CreateAndStartTimer(0.5, Warp)
+        end
+
+        if playyan.WarpingUp then
+            playyan.Warping = false
+            playyan.Moving = true
+            playyan.Visible = false
+            biribiri:CreateAndStartTimer(0.5, WarpUp)
+        end
     end)
     
     yanUpTimer = biribiri:CreateTimer(jumpSpeed / 1.9, function ()
@@ -173,6 +232,10 @@ function love.keypressed(key)
             end
         end
 
+        if currentMedia == 0 then
+            playyan.WarpingUp = true
+        end
+
         playbackState = "rewind"
         
         playyan.Moving = true
@@ -201,6 +264,10 @@ function love.keypressed(key)
             end
         end
         playbackState = "ff"
+
+        if currentMedia == #GetMediaFolder() + 1 then
+            playyan.Warping = true
+        end
         
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
@@ -350,8 +417,6 @@ function love.draw()
     end
     love.graphics.setColor(0,1,1)
     
-    
-    
     for i = -10, 100 do
         love.graphics.line(
             stairXOffset + ((i - 1) * stairWidth), 
@@ -373,8 +438,11 @@ function love.draw()
     for i, file in ipairs(m) do
         love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
         
-        love.graphics.print(file.name, 15 + ((i + 3) * stairWidth) + stairWidth + 5, height - ((i + 3) * stairHeight) - 33)
+        love.graphics.print(file.name, 15 + ((i + 2) * stairWidth) + stairWidth + 5, height - ((i + 2) * stairHeight) - 33)
     end
+    
+   
+    
     if backdoor.Visible then
         love.graphics.draw(assets["img/backdoor_"..tostring(backdoor.Index)..".png"], backdoor.X + 6, backdoor.Y + 8)
 
@@ -385,6 +453,9 @@ function love.draw()
     if playyan.Visible then
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
+    
+    love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
+    love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
     
     if speechBubble.Visible and (not playyan.Moving and isPlaying) then
         love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
