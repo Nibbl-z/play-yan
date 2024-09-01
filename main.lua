@@ -13,6 +13,7 @@ local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible =
 
 local playbackState = "play"
 local isDarkened = false
+local flashProgress = false
 
 local jumpSpeed = 0.15
 local currentMedia = 1
@@ -58,36 +59,6 @@ function LoadMusicFolder(folder, doReturn)
     end
 end
 
-
-
-local we = {
-    {
-        name = "song.mp3",
-        type = "file",
-        sprite = "img/music.png"
-    },
-    {
-        name = "thisfolder",
-        files = {
-            {
-                name = "song3.mp3",
-                type = "file",
-                sprite = "img/music.png"
-            },
-            
-            {
-                name = "song2534.mp3",
-                type = "file",
-                sprite = "img/music.png"
-            }
-        },
-        type = "folder",
-        sprite = "img/door.png",
-        isRoot = false
-    } 
-    
-}
-
 function UnrootMedia(folder)
     for _, v in ipairs(folder) do
         if v.isRoot == true then
@@ -131,10 +102,12 @@ function love.load()
     
     yanUpTimer = biribiri:CreateTimer(jumpSpeed / 1.9, function ()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2.2, EasingStyle.QuadOut), {Y = playyan.Y + 30 - stairHeight}):Play()
+        playbackState = "play"
     end)
     
     yanDownTimer = biribiri:CreateTimer(jumpSpeed / 1.9, function ()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2.2, EasingStyle.QuadOut), {Y = playyan.Y + 10 + stairHeight}):Play()
+        playbackState = "play"
     end)
     
     doorEnterTimer = biribiri:CreateTimer(0.2, function ()
@@ -160,6 +133,11 @@ function love.load()
     speechBubbleSwap = biribiri:CreateAndStartTimer(0.5, function ()
         speechBubble.Mode = not speechBubble.Mode
         isDarkened = not isDarkened
+
+        flashProgress = true
+        biribiri:CreateAndStartTimer(0.1, function ()
+            flashProgress = false
+        end)
     end, true)
 end
 
@@ -178,6 +156,8 @@ function love.keypressed(key)
                 currentSong:play()
             end
         end
+
+        playbackState = "rewind"
         
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X + stairWidth, Y = camera.Y - stairHeight}):Play()
@@ -204,8 +184,8 @@ function love.keypressed(key)
                 currentSong:play()
             end
         end
+        playbackState = "ff"
         
-
         playyan.Moving = true
         yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
         yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X + stairWidth, Y = backdoor.Y - stairHeight}):Play()
@@ -396,7 +376,7 @@ function love.draw()
         
         love.graphics.draw(assets["img/bottom_gradient.png"], 0 - camera.X, height - 50 - camera.Y, 0, 2, 1)
         
-        local seconds = math.floor(currentSong:tell("seconds"))
+        local seconds = math.floor(currentSong:tell("seconds") % 60)
         if seconds < 10 then
             seconds = "0"..tostring(seconds)
         end
@@ -405,13 +385,15 @@ function love.draw()
         if minutes < 10 then
             minutes = "0"..tostring(minutes)
         end
-
+        
         local hours = math.floor(currentSong:tell("seconds") / 3600 )-- dude whos listening to hour long audio on my playyan media player
         if hours < 10 then
             hours = "0"..tostring(hours)
         end
         
         love.graphics.printf(hours..":"..minutes..":"..seconds, width - 105 - camera.X, 98 - camera.Y, 100, "right")
+        
+        love.graphics.draw(assets[flashProgress and "img/progress_flash.png" or "img/progress.png"], (width * (currentSong:tell("seconds") / currentSong:getDuration("seconds"))) - camera.X, height - 51 - camera.Y )
     end
     
     love.graphics.pop()
