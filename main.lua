@@ -29,6 +29,9 @@ local media = {
 
 }
 
+local volume = 27 -- 100% is 27 ticks, goes up to 36, which should be 133% volume
+local adjustingVolume = false
+
 local isPlaying = false
 
 local currentSong = nil
@@ -146,6 +149,7 @@ function love.load()
     love.window.setMode(720, 480)
     LoadMusicFolder("music")
     biribiri:LoadAudio("music", "stream")
+    biribiri:LoadAudio("sfx", "static")
     biribiri:LoadSprites("img")
     
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
@@ -202,10 +206,15 @@ function love.load()
         isDarkened = not isDarkened
         
         flashProgress = true
-        biribiri:CreateAndStartTimer(0.1, function ()
+        biribiri:CreateAndStartTimer(0.1, function ()  
             flashProgress = false
         end)
     end, true)
+
+    hideVolumeTimer = biribiri:CreateTimer(2, function ()
+        adjustingVolume = false
+    end)
+
     yan:NewTween(car, yan:TweenInfo(4), {X = width + 40}):Play()
     yan:NewTween(fish, yan:TweenInfo(8), {X = width + 40}):Play()
 
@@ -221,10 +230,9 @@ function love.load()
 end
 
 function love.keypressed(key)
-    
     if key == "a" then
         if playyan.Moving then return end
-        
+        assets["sfx/blip.mp3"]:play()
         currentMedia = currentMedia - 1
         if GetMediaFolder()[currentMedia] ~= nil then 
             if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
@@ -233,6 +241,7 @@ function love.keypressed(key)
                 end
                 currentSong = assets[GetMediaFolder()[currentMedia].path]
                 currentSong:play()
+                currentSong:setVolume(volume / 27)
             end
         end
 
@@ -256,7 +265,7 @@ function love.keypressed(key)
     
     elseif key == "d" then
         if playyan.Moving then return end
-        
+        assets["sfx/blip.mp3"]:play()
         currentMedia = currentMedia + 1
         if GetMediaFolder()[currentMedia] ~= nil then 
             if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
@@ -265,6 +274,7 @@ function love.keypressed(key)
                 end
                 currentSong = assets[GetMediaFolder()[currentMedia].path]
                 currentSong:play()
+                currentSong:setVolume(volume / 27)
             end
         end
         playbackState = "ff"
@@ -288,6 +298,7 @@ function love.keypressed(key)
         playyan.Direction = 1
     elseif key == "space" then
         if playyan.Moving then return end
+        
         if GetMediaFolder()[currentMedia] == nil then return end
         
         if GetMediaFolder()[currentMedia].type == "file" then
@@ -298,8 +309,10 @@ function love.keypressed(key)
             end
             currentSong = assets[GetMediaFolder()[currentMedia].path]
             currentSong:play()
+            currentSong:setVolume(volume / 27)
             
         elseif GetMediaFolder()[currentMedia].type == "folder" then
+            assets["sfx/blip.mp3"]:play()
             folderIndex = currentMedia
             playyan.Direction = 1
             playyan.Moving = true
@@ -345,9 +358,22 @@ function love.keypressed(key)
             end)
         end
     elseif key == "w" then
+        if isPlaying then
+            adjustingVolume = true
+            volume = volume + 1
+            hideVolumeTimer.Started = false
+            hideVolumeTimer:Start()
+            
+            if currentSong ~= nil then
+                currentSong:setVolume(volume / 27)
+            end
+            
+
+            return
+        end
         if backdoor.Visible == false then return end
         if playyan.Moving then return end
-
+        assets["sfx/blip.mp3"]:play()
         playyan.Moving = true
         playyan.Direction = -1
         
@@ -391,6 +417,18 @@ function love.keypressed(key)
                 media[folderIndex].sprite = "img/door.png"
             end)
         end)
+    elseif key == "s" then
+        if isPlaying then
+            adjustingVolume = true
+            volume = volume - 1
+            hideVolumeTimer.Started = false
+            hideVolumeTimer:Start()
+
+            if currentSong ~= nil then
+                currentSong:setVolume(volume / 27)
+            end
+            return
+        end
     end
 end
 
@@ -465,10 +503,10 @@ function love.draw()
         
         love.graphics.draw(assets["img/guy.png"], 7 + ((#m + 6) * stairWidth), height - ((#m + 6) * stairHeight) - 33)
     end
-
+    
     
 
-
+    
     if playyan.Visible then
         love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
     end
@@ -481,8 +519,23 @@ function love.draw()
         love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
     end
     
+    if adjustingVolume then
+        local extraSize = 0
+        
+        for i = 1, volume do
+            if i % 3 == 0 then
+                extraSize = extraSize + 1
+            end
+        end
+        
+        print(extraSize, volume)
+        love.graphics.draw(assets["img/volume.png"], 2 - camera.X, 30 - camera.Y)
+        love.graphics.setColor(0,0,0)
+        love.graphics.rectangle("fill", 5 - camera.X, 46 - camera.Y, 4, -volume - extraSize + 47)
+        love.graphics.setColor(1,1,1)
+    end
+    
     if isPlaying and currentSong ~= nil then
-        print(playbackState..(isDarkened and "_darkened.png" or ".png"))
         love.graphics.draw(assets["img/"..playbackState..(isDarkened and "_darkened.png" or ".png")], 30 - camera.X, 60 - camera.Y)
         
         love.graphics.draw(assets["img/bottom_gradient.png"], 0 - camera.X, height - 50 - camera.Y, 0, 2, 1)
