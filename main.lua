@@ -17,6 +17,8 @@ local car = {X = -20}
 local fish = {X = 0}
 
 local playbackState = "play"
+local playbackMode = 1
+local playbackModes = {"loop", "loopsong", "shuffle", "song"}
 local isDarkened = false
 local flashProgress = false
 
@@ -36,6 +38,76 @@ local isPlaying = false
 
 local currentSong = nil
 
+function FastForward()
+    if playyan.Moving then return end
+    assets["sfx/blip.mp3"]:play()
+    currentMedia = currentMedia + 1
+    if GetMediaFolder()[currentMedia] ~= nil then 
+        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+            if currentSong ~= nil then
+                currentSong:stop()
+            end
+            currentSong = assets[GetMediaFolder()[currentMedia].path]
+            currentSong:play()
+            currentSong:setVolume(volume / 27)
+        end
+    end
+    playbackState = "ff"
+
+    if currentMedia == #GetMediaFolder() + 1 and #GetMediaFolder() > 0 then
+        playyan.Warping = true
+    end
+    
+    playyan.Moving = true
+    yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
+    yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X + stairWidth, Y = backdoor.Y - stairHeight}):Play()
+
+    playyan.Sprite = "img/yan_jump.png"
+    unjumpTimer:Start()
+    
+    yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
+    yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
+    
+    yanUpTimer:Start()
+
+    playyan.Direction = 1
+end
+
+function Rewind()
+    if playyan.Moving then return end
+
+    assets["sfx/blip.mp3"]:play()
+    currentMedia = currentMedia - 1
+    if GetMediaFolder()[currentMedia] ~= nil then 
+        if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+            if currentSong ~= nil then
+                currentSong:stop()
+            end
+            currentSong = assets[GetMediaFolder()[currentMedia].path]
+            currentSong:play()
+            currentSong:setVolume(volume / 27)
+        end
+    end
+
+    if currentMedia == 0 and #GetMediaFolder() > 0 then
+        playyan.WarpingUp = true
+    end
+
+    playbackState = "rewind"
+    
+    playyan.Moving = true
+    yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X + stairWidth, Y = camera.Y - stairHeight}):Play()
+    yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X - stairWidth, Y = backdoor.Y + stairHeight}):Play()
+    playyan.Sprite = "img/yan_jump.png"
+    unjumpTimer:Start()
+    
+    yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X - stairWidth}):Play()
+    yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 10}):Play()
+    yanDownTimer:Start()
+
+    playyan.Direction = -1
+end
+
 function LoadMusicFolder(folder, doReturn)
     local files = {}
 
@@ -50,7 +122,7 @@ function LoadMusicFolder(folder, doReturn)
                 sprite = "img/music.png"
             })
         elseif info.type == "directory" and not doReturn then
-            table.insert(files, {
+            table.insert(files, 1, {
                 name = file,
                 type = "folder",
                 sprite = "img/door.png",
@@ -108,6 +180,21 @@ function Warp()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
         
         yanUpTimer:Start()
+
+        if isPlaying then
+            biribiri:CreateAndStartTimer(jumpSpeed / 1.9, function ()
+                if GetMediaFolder()[currentMedia] ~= nil then 
+                    if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+                        if currentSong ~= nil then
+                            currentSong:stop()
+                        end
+                        currentSong = assets[GetMediaFolder()[currentMedia].path]
+                        currentSong:play()
+                        currentSong:setVolume(volume / 27)
+                    end
+                end
+            end)
+        end
         
         playyan.Direction = 1
     end)
@@ -133,6 +220,21 @@ function WarpUp()
         yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 10}):Play()
         
         yanDownTimer:Start()
+
+        if isPlaying then
+            biribiri:CreateAndStartTimer(jumpSpeed / 1.9, function ()
+                if GetMediaFolder()[currentMedia] ~= nil then 
+                    if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
+                        if currentSong ~= nil then
+                            currentSong:stop()
+                        end
+                        currentSong = assets[GetMediaFolder()[currentMedia].path]
+                        currentSong:play()
+                        currentSong:setVolume(volume / 27)
+                    end
+                end
+            end)
+        end
         
         playyan.Direction = -1
     end)
@@ -155,6 +257,10 @@ function love.load()
     unjumpTimer = biribiri:CreateTimer(jumpSpeed, function ()
         playyan.Sprite = "img/yan_stand.png"  
         playyan.Moving = false
+
+        if isPlaying then
+            playyan.Direction = -1
+        end
         
         if playyan.Warping then
             playyan.Warping = false
@@ -231,74 +337,10 @@ end
 
 function love.keypressed(key)
     if key == "a" then
-        if playyan.Moving then return end
-        assets["sfx/blip.mp3"]:play()
-        currentMedia = currentMedia - 1
-        if GetMediaFolder()[currentMedia] ~= nil then 
-            if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
-                if currentSong ~= nil then
-                    currentSong:stop()
-                end
-                currentSong = assets[GetMediaFolder()[currentMedia].path]
-                currentSong:play()
-                currentSong:setVolume(volume / 27)
-            end
-        end
-
-        if currentMedia == 0 and #GetMediaFolder() > 0 then
-            playyan.WarpingUp = true
-        end
-
-        playbackState = "rewind"
-        
-        playyan.Moving = true
-        yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X + stairWidth, Y = camera.Y - stairHeight}):Play()
-        yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X - stairWidth, Y = backdoor.Y + stairHeight}):Play()
-        playyan.Sprite = "img/yan_jump.png"
-        unjumpTimer:Start()
-        
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X - stairWidth}):Play()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 10}):Play()
-        yanDownTimer:Start()
-
-        playyan.Direction = -1
-    
+        Rewind()
     elseif key == "d" then
-        if playyan.Moving then return end
-        assets["sfx/blip.mp3"]:play()
-        currentMedia = currentMedia + 1
-        if GetMediaFolder()[currentMedia] ~= nil then 
-            if isPlaying and GetMediaFolder()[currentMedia].type == "file" then
-                if currentSong ~= nil then
-                    currentSong:stop()
-                end
-                currentSong = assets[GetMediaFolder()[currentMedia].path]
-                currentSong:play()
-                currentSong:setVolume(volume / 27)
-            end
-        end
-        playbackState = "ff"
-
-        if currentMedia == #GetMediaFolder() + 1 and #GetMediaFolder() > 0 then
-            playyan.Warping = true
-        end
-        
-        playyan.Moving = true
-        yan:NewTween(camera, yan:TweenInfo(jumpSpeed / 2), {X = camera.X - stairWidth, Y = camera.Y + stairHeight}):Play()
-        yan:NewTween(backdoor, yan:TweenInfo(jumpSpeed, EasingStyle.QuadInOut), {X = backdoor.X + stairWidth, Y = backdoor.Y - stairHeight}):Play()
-
-        playyan.Sprite = "img/yan_jump.png"
-        unjumpTimer:Start()
-        
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.Linear), {X = playyan.X + stairWidth}):Play()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2, EasingStyle.QuadOut), {Y = playyan.Y - 30}):Play()
-        
-        yanUpTimer:Start()
-
-        playyan.Direction = 1
+        FastForward()
     elseif key == "space" then
-        if playyan.Moving then return end
-        
         if GetMediaFolder()[currentMedia] == nil then return end
         
         if GetMediaFolder()[currentMedia].type == "file" then
@@ -310,6 +352,8 @@ function love.keypressed(key)
             currentSong = assets[GetMediaFolder()[currentMedia].path]
             currentSong:play()
             currentSong:setVolume(volume / 27)
+
+            playyan.Direction = -1
             
         elseif GetMediaFolder()[currentMedia].type == "folder" then
             assets["sfx/blip.mp3"]:play()
@@ -429,6 +473,13 @@ function love.keypressed(key)
             end
             return
         end
+    elseif key == "z" then
+        if isPlaying then
+            playbackMode = playbackMode + 1
+            if playbackMode == 5 then
+                playbackMode = 1
+            end
+        end
     end
 end
 
@@ -438,11 +489,45 @@ function love.update(dt)
     
     speechBubble.X = playyan.X - 12
     speechBubble.Y = playyan.Y - 9
-
+    
     if speechBubble.Mode then
         speechBubble.Sprite = "img/speech_empty.png"
     else
         speechBubble.Sprite = "img/speech_note.png"
+    end
+
+    if currentSong ~= nil then
+        currentSong:setLooping(playbackMode == 2)
+
+        if currentSong:tell() >= currentSong:getDuration() - 0.1 then
+            if playbackMode == 1 then
+                FastForward()
+            end
+            
+            if playbackMode == 3 then
+                currentSong:stop()
+                local function PickNextSong()
+                    local i = love.math.random(1, #GetMediaFolder())
+                    local chosen = GetMediaFolder()[i]
+                    if chosen.type == "folder" then return PickNextSong() end
+                    if i == currentMedia then return PickNextSong() end
+                    return i
+                end
+                
+                local picked = PickNextSong()
+                print(picked - currentMedia)
+
+                if picked - currentMedia > 0 then
+                    for i = 1, picked - currentMedia do
+                        biribiri:CreateAndStartTimer((jumpSpeed / 1.9) * i, FastForward)
+                    end
+                else
+                    for i = 1, -(picked - currentMedia) do
+                        biribiri:CreateAndStartTimer((jumpSpeed / 1.9) * i, Rewind)
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -519,6 +604,8 @@ function love.draw()
         love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
     end
     
+    
+
     if adjustingVolume then
         local extraSize = 0
         
@@ -561,6 +648,8 @@ function love.draw()
         
         love.graphics.draw(assets["img/car.png"], car.X - camera.X, height - 8 - camera.Y)
         love.graphics.draw(assets["img/fish.png"], fish.X - camera.X, height - 40 - camera.Y)
+
+        love.graphics.draw(assets["img/playback_"..playbackModes[playbackMode]..".png"], 2 - camera.X, 98 - camera.Y)
     end
     
     love.graphics.pop()
