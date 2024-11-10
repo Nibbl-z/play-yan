@@ -7,7 +7,8 @@ local stairXOffset, stairYOffset = 15, 0
 require "yan"
 require "biribiri"
 
-local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true, Warping = false}
+local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, Direction = 1, Visible = true, Warping = false, Grooviness = 0, GrooveDuration = 0.0}
+local yanPlant = {X = 121, Y = 58, Type = "plant", Frame = 1, Visible = false}
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
 
@@ -380,10 +381,16 @@ function love.load()
     biribiri:CreateAndStartTimer(2, function ()
         loadingbird.Flapping = false
     end)
+
+    biribiri:CreateAndStartTimer(0.5, function ()
+        if playyan.Grooviness > 0 then
+            playyan.Grooviness = playyan.Grooviness - 1
+        end
+    end, true)
     
     biribiri:CreateAndStartTimer(4, function ()
         loadingbird.Flapping = true
-        yan:NewTween(loadingbird, yan:TweenInfo(1.5, EasingStyle.CircularIn), {X = 100, Y = -20}):Play()
+        yan:NewTween(loadingbird, yan:TweenInfo(0.8, EasingStyle.CircularIn), {X = 100, Y = -20}):Play()
     end)
     
     local function Blink()
@@ -393,7 +400,7 @@ function love.load()
             loadingYanBlink = false
         end)
     end
-
+    
     biribiri:CreateAndStartTimer(2.4, function ()
         loadingYanBlink = true
         Blink()
@@ -405,9 +412,82 @@ function love.load()
     yan:NewTween(loadingbird, yan:TweenInfo(2, EasingStyle.CircularOut), {X = 189, Y = 45}):Play()
 end
 
+function love.keyreleased(key)
+    if key == "j" then
+        if scene == "music" and isPlaying then
+            local duration = love.timer.getTime() - playyan.GrooveDuration
+            
+            if playyan.Grooviness < 5 then
+                if duration <= 0.2 then
+                    playyan.Sprite = "img/yan_stand.png"
+                end
+               
+            elseif playyan.Grooviness >= 5 then
+                if duration <= 0.2 then
+                    playyan.Sprite = "img/yan_stretch.png"
+
+                    biribiri:CreateAndStartTimer(0.02, function ()
+                        playyan.Sprite = "img/yan_stand.png"
+                    end)
+                end
+            end
+            
+            if duration > 0.2 then
+                if playyan.Grooviness < 5 then
+                    yanPlant.Type = "plant"
+                else
+                     yanPlant.Type = "flower"
+                end
+                playyan.Sprite = "img/yan_flower.png"
+                yanPlant.Visible = true
+                yanPlant.Frame = 1
+                playyan.Y = playyan.Y - 1
+
+                yanPlant.X = playyan.X - 8
+                yanPlant.Y = playyan.Y - 21
+                
+                biribiri:CreateAndStartTimer(0.06, function ()
+                    playyan.Y = playyan.Y + 1
+
+                    yanPlant.Frame = 2
+                    biribiri:CreateAndStartTimer(0.12, function ()
+                        yanPlant.Frame = 3
+                    end)
+                end)
+                
+                biribiri:CreateAndStartTimer(0.4, function ()
+                    if playyan.Sprite == "img/yan_flower.png" then
+                        yanPlant.Visible = false
+                        playyan.Sprite = "img/yan_stand.png"
+                    end
+                end)
+            end
+        end
+    end
+end
+
 function love.keypressed(key)
     if scene == "loading" then
         FinishLoading()
+    end
+
+    if key == "j" then
+        if scene == "music" and isPlaying then
+            yanPlant.Visible = false
+            playyan.GrooveDuration = love.timer.getTime()
+            playyan.Grooviness = playyan.Grooviness + 1
+
+            if playyan.Grooviness < 5 then
+                playyan.Sprite = "img/yan_bop.png"
+            elseif playyan.Grooviness >= 5 then
+                playyan.Sprite = "img/yan_squat1.png"
+
+                biribiri:CreateAndStartTimer(0.02, function ()
+                    playyan.Sprite = "img/yan_squat2.png"
+                end)
+            end
+            
+        end
     end
 
     if key == "a" then
@@ -772,12 +852,17 @@ function love.draw()
         if playyan.Visible then
             love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
         end
+        
+        if yanPlant.Visible then
+            love.graphics.draw(assets["img/"..yanPlant.Type.."_"..tostring(yanPlant.Frame)..".png"], yanPlant.X, yanPlant.Y)
+        end
+
         if #GetMediaFolder() > 0 then
             love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
             love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
         end
         
-        if speechBubble.Visible and (not playyan.Moving and isPlaying) then
+        if speechBubble.Visible and (not playyan.Moving and isPlaying) and playyan.Grooviness == 0 then
             love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
         end
         
