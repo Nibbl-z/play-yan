@@ -23,6 +23,25 @@ local menuBird = {X = -20, Y = 10, AnimState = 1, GetYOffset = function (state)
     if state >= 7 and state <= 10 then return -2 end
     return -1
 end}
+
+local musicGrooveAnim1 = {
+    {Sprite = "img/musicgroove_3.png", Y = 2},
+    {Sprite = "img/music.png", Y = -1},
+    {Sprite = "img/musicgroove_2.png", Y = -1},
+    {Sprite = "img/musicgroove_2.png", Y = 0},
+    {Sprite = "img/music.png", Y = 1},
+    {Sprite = "img/music.png", Y = 0},
+}
+
+local musicJumpAnim = {
+    {Sprite = "img/musicgroove_3.png", Y = -2},
+    {Sprite = "img/musicgroove_3.png", Y = -4},
+    {Sprite = "img/musicgroove_2.png", Y = -4},
+    {Sprite = "img/music.png", Y = -4},
+    {Sprite = "img/music.png", Y = -3},
+    {Sprite = "img/music.png", Y = 0},
+}
+
 local menuSelection = 1
 
 local stars = require("stars")
@@ -59,6 +78,7 @@ local fade = {Alpha = 0}
 
 function FastForward()
     if playyan.Moving then return end
+    playyan.Grooviness = 0
     assets["sfx/blip.mp3"]:play()
     currentMedia = currentMedia + 1
     if GetMediaFolder()[currentMedia] ~= nil then 
@@ -94,7 +114,7 @@ end
 
 function Rewind()
     if playyan.Moving then return end
-
+    playyan.Grooviness = 0
     assets["sfx/blip.mp3"]:play()
     currentMedia = currentMedia - 1
     if GetMediaFolder()[currentMedia] ~= nil then 
@@ -148,7 +168,9 @@ function LoadMusicFolder(folder, doReturn)
                 name = file,
                 path = folder.."/"..file,
                 type = "file",
-                sprite = "img/music.png"
+                sprite = "img/music.png",
+                yOffset = 0,
+                jumping = false
             })
         elseif info.type == "directory" and not doReturn then
             table.insert(files, 1, {
@@ -267,6 +289,18 @@ function WarpUp()
         
         playyan.Direction = -1
     end)
+end
+
+function NoteJump(note)
+    if note.type == "folder" then return end
+    for i = 1, #musicJumpAnim do
+        biribiri:CreateAndStartTimer(i * 0.03, function ()
+            if note.jumping then
+                note.sprite = musicJumpAnim[i].Sprite
+                note.yOffset = musicJumpAnim[i].Y
+            end
+        end)
+    end
 end
 
 function love.load()
@@ -410,6 +444,52 @@ function love.load()
     end)
     
     yan:NewTween(loadingbird, yan:TweenInfo(2, EasingStyle.CircularOut), {X = 189, Y = 45}):Play()
+
+    biribiri:CreateAndStartTimer(0.2, function ()
+        if playyan.Grooviness >= 5 then
+            for i = 1, #musicGrooveAnim1 do
+                biribiri:CreateAndStartTimer(i * 0.03, function ()
+                    -- holy mother of spaghetti code
+                    if playyan.Grooviness >= 8 and playyan.Grooviness < 13 then
+                        for o = -1, 1 do
+                            if GetMediaFolder()[currentMedia + o].type == "file" and GetMediaFolder()[currentMedia + o].jumping == false then
+                                GetMediaFolder()[currentMedia + o].sprite = musicGrooveAnim1[i].Sprite
+                                GetMediaFolder()[currentMedia + o].yOffset = musicGrooveAnim1[i].Y
+                            end
+                        end
+                    elseif playyan.Grooviness >= 13 and playyan.Grooviness < 17 then
+                        for o = -2, 2 do
+                            if GetMediaFolder()[currentMedia + o].type == "file" and GetMediaFolder()[currentMedia + o].jumping == false then
+                                GetMediaFolder()[currentMedia + o].sprite = musicGrooveAnim1[i].Sprite
+                                GetMediaFolder()[currentMedia + o].yOffset = musicGrooveAnim1[i].Y
+                            end
+                        end
+                    elseif playyan.Grooviness >= 17 then
+                        for o = -3, 3 do
+                            if GetMediaFolder()[currentMedia + o].type == "file" and GetMediaFolder()[currentMedia + o].jumping == false then
+                                GetMediaFolder()[currentMedia + o].sprite = musicGrooveAnim1[i].Sprite
+                                GetMediaFolder()[currentMedia + o].yOffset = musicGrooveAnim1[i].Y
+                            end
+                        end
+                    else
+                        if GetMediaFolder()[currentMedia ].jumping == false then
+                            GetMediaFolder()[currentMedia].sprite = musicGrooveAnim1[i].Sprite
+                            GetMediaFolder()[currentMedia].yOffset = musicGrooveAnim1[i].Y
+                        end
+                    end
+                    
+                end)
+            end
+        end
+
+        for _, f in ipairs(GetMediaFolder()) do
+            if f.type == "file" then
+                f.sprite = "img/music.png"
+                f.yOffset = 0
+            end
+        end
+
+    end, true)
 end
 
 function love.keyreleased(key)
@@ -433,10 +513,10 @@ function love.keyreleased(key)
             end
             
             if duration > 0.2 then
-                if playyan.Grooviness < 5 then
+                if playyan.Grooviness < 8 then
                     yanPlant.Type = "plant"
                 else
-                     yanPlant.Type = "flower"
+                    yanPlant.Type = "flower"
                 end
                 playyan.Sprite = "img/yan_flower.png"
                 yanPlant.Visible = true
@@ -445,6 +525,26 @@ function love.keyreleased(key)
 
                 yanPlant.X = playyan.X - 8
                 yanPlant.Y = playyan.Y - 21
+                
+                local startJump, endJump = 0, 0
+                
+                if playyan.Grooviness >= 17 then
+                    startJump = -3
+                    endJump = 3
+                elseif playyan.Grooviness >= 13 then
+                    startJump = -2
+                    endJump = 2
+                elseif playyan.Grooviness >= 8 then
+                    startJump = -1
+                    endJump = 1
+                end
+                
+                for i = startJump, endJump do
+                    biribiri:CreateAndStartTimer(math.abs(i) * 0.06, function ()
+                        GetMediaFolder()[currentMedia + i].jumping = true
+                        NoteJump(GetMediaFolder()[currentMedia + i])
+                    end)
+                end
                 
                 biribiri:CreateAndStartTimer(0.06, function ()
                     playyan.Y = playyan.Y + 1
@@ -472,10 +572,15 @@ function love.keypressed(key)
     end
 
     if key == "j" then
+        for _, f in ipairs(GetMediaFolder()) do
+            if f.type == "file" then
+                f.jumping = false            
+            end
+        end
         if scene == "music" and isPlaying then
             yanPlant.Visible = false
             playyan.GrooveDuration = love.timer.getTime()
-            playyan.Grooviness = playyan.Grooviness + 1
+            playyan.Grooviness = math.clamp(playyan.Grooviness + 1, 0, 20)
 
             if playyan.Grooviness < 5 then
                 playyan.Sprite = "img/yan_bop.png"
@@ -829,7 +934,8 @@ function love.draw()
         local m = GetMediaFolder()
         
         for i, file in ipairs(m) do
-            love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
+            local yOffset = file.yOffset or 0
+            love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39 + yOffset)
             
             love.graphics.print(file.name, 15 + ((i + 2) * stairWidth) + stairWidth + 5, height - ((i + 2) * stairHeight) - 33)
         end
