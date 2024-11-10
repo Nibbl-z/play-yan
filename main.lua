@@ -11,7 +11,22 @@ local playyan = {X = 121, Y = 58, Sprite = "img/yan_stand.png", Moving = false, 
 local backdoor = {X = 121 - 50, Y = 58 - 50, Index = 1, Visible = false, Whoosh = false}
 local speechBubble = {X = 121, Y = 58, Sprite = "img/speech_note.png", Visible = true, Mode = false}
 
+local loadingbird = {X = 240, Y = -20, Sprite = "img/loadingbird_stand.png", Flapping = true}
+local loadingYanBlink = false
+local birdStages = {"wingup", "glide", "wingdown", "glide"}
+local birdStage = 1
+
+local menuBirdAnim = {1, 2, 1, 2, 3, 4, 1, 2, 1, 2, 5, 6}
+local menuBird = {X = -20, Y = 10, AnimState = 1, GetYOffset = function (state)
+    if state <= 4 then return 0 end 
+    if state >= 7 and state <= 10 then return -2 end
+    return -1
+end}
+local menuSelection = 1
+
 local stars = require("stars")
+local clouds = require("clouds")
+local birds = require("birds")
 
 local car = {X = -20}
 local fish = {X = 0}
@@ -38,6 +53,9 @@ local isPlaying = false
 
 local currentSong = nil
 
+local scene = "loading"
+local fade = {Alpha = 0}
+
 function FastForward()
     if playyan.Moving then return end
     assets["sfx/blip.mp3"]:play()
@@ -53,7 +71,7 @@ function FastForward()
         end
     end
     playbackState = "ff"
-
+    
     if currentMedia == #GetMediaFolder() + 1 and #GetMediaFolder() > 0 then
         playyan.Warping = true
     end
@@ -106,6 +124,16 @@ function Rewind()
     yanDownTimer:Start()
 
     playyan.Direction = -1
+end
+
+function FinishLoading()
+    yan:NewTween(fade, yan:TweenInfo(0.5), {Alpha = 1}):Play()
+    biribiri:CreateAndStartTimer(0.5, function ()
+        scene = "menu"
+        
+        yan:NewTween(fade, yan:TweenInfo(0.5), {Alpha = 0}):Play()
+        yan:NewTween(menuBird, yan:TweenInfo(0.7, EasingStyle.CircularOut), {X = 85, Y = 48}):Play()
+    end)
 end
 
 function LoadMusicFolder(folder, doReturn)
@@ -244,6 +272,8 @@ function love.load()
     love.window.setTitle("Play-Yan")
     love.window.setIcon(love.image.newImageData("/img/icon.png"))
     stars:Init()
+    clouds:Init()
+    birds:Init()
     love.filesystem.setIdentity("play-yan")
     love.filesystem.createDirectory("music")
     love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -301,6 +331,9 @@ function love.load()
     end)
     
     backdoorSpinAnim = biribiri:CreateAndStartTimer(0.06, function ()
+        menuBird.AnimState = menuBird.AnimState + 1
+        if menuBird.AnimState == #menuBirdAnim + 1 then menuBird.AnimState = 1 end
+
         backdoor.Index = backdoor.Index + 1
         if backdoor.Index == 7 then
             backdoor.Index = 1
@@ -333,151 +366,230 @@ function love.load()
         fish.X = -20
         yan:NewTween(fish, yan:TweenInfo(8), {X = width + 40}):Play()
     end, true)
+    
+    biribiri:CreateAndStartTimer(4.5, function ()
+        if scene ~= "loading" then return end
+        FinishLoading()
+    end)
+    
+    biribiri:CreateAndStartTimer(0.04, function ()
+        birdStage = birdStage + 1
+        if birdStage == 5 then birdStage = 1 end
+    end, true)
+    
+    biribiri:CreateAndStartTimer(2, function ()
+        loadingbird.Flapping = false
+    end)
+    
+    biribiri:CreateAndStartTimer(4, function ()
+        loadingbird.Flapping = true
+        yan:NewTween(loadingbird, yan:TweenInfo(1.5, EasingStyle.CircularIn), {X = 100, Y = -20}):Play()
+    end)
+    
+    local function Blink()
+        loadingYanBlink = true
+        
+        biribiri:CreateAndStartTimer(0.06, function ()
+            loadingYanBlink = false
+        end)
+    end
+
+    biribiri:CreateAndStartTimer(2.4, function ()
+        loadingYanBlink = true
+        Blink()
+
+        biribiri:CreateAndStartTimer(0.12, Blink)
+        biribiri:CreateAndStartTimer(0.9, Blink)
+    end)
+    
+    yan:NewTween(loadingbird, yan:TweenInfo(2, EasingStyle.CircularOut), {X = 189, Y = 45}):Play()
 end
 
 function love.keypressed(key)
+    if scene == "loading" then
+        FinishLoading()
+    end
+
     if key == "a" then
-        Rewind()
+        if scene == "music" then
+            Rewind()
+        end 
     elseif key == "d" then
-        FastForward()
+        if scene == "music" then
+            FastForward()
+        end
     elseif key == "space" then
-        if GetMediaFolder()[currentMedia] == nil then return end
-        
-        if GetMediaFolder()[currentMedia].type == "file" then
-            isPlaying = not isPlaying
-            if currentSong ~= nil then
-                currentSong:stop()
-                if not isPlaying then return end
+        if scene == "menu" then
+            if menuSelection == 2 then
+                yan:NewTween(fade, yan:TweenInfo(0.3), {Alpha = 1}):Play()
+                assets["sfx/blip.mp3"]:play()
+                biribiri:CreateAndStartTimer(1, function ()
+                    scene = "music"
+                    menuSelection = 1
+                    fade.Alpha = 0
+                end)
             end
-            currentSong = assets[GetMediaFolder()[currentMedia].path]
-            currentSong:play()
-            currentSong:setVolume(volume / 27)
-
-            playyan.Direction = -1
+        end
+        if scene == "music" then
+            if GetMediaFolder()[currentMedia] == nil then return end
             
-        elseif GetMediaFolder()[currentMedia].type == "folder" then
-            assets["sfx/blip.mp3"]:play()
-            folderIndex = currentMedia
-            playyan.Direction = 1
-            playyan.Moving = true
-            GetMediaFolder()[currentMedia].sprite = "img/door_open.png"
-            doorEnterTimer:Start()
-            doorUnwhooshTimer:Start()
-            doorCloseTimer:Start()
+            if GetMediaFolder()[currentMedia].type == "file" then
+                isPlaying = not isPlaying
+                if currentSong ~= nil then
+                    currentSong:stop()
+                    if not isPlaying then return end
+                end
+                currentSong = assets[GetMediaFolder()[currentMedia].path]
+                currentSong:play()
+                currentSong:setVolume(volume / 27)
 
-            biribiri:CreateAndStartTimer(1, function ()
-                UnrootMedia(media)
-                GetMediaFolder()[currentMedia].isRoot = true
+                playyan.Direction = -1
+                
+            elseif GetMediaFolder()[currentMedia].type == "folder" then
+                assets["sfx/blip.mp3"]:play()
+                folderIndex = currentMedia
+                playyan.Direction = 1
+                playyan.Moving = true
+                GetMediaFolder()[currentMedia].sprite = "img/door_open.png"
+                doorEnterTimer:Start()
+                doorUnwhooshTimer:Start()
+                doorCloseTimer:Start()
 
-                fading = true
-                backdoor.Visible = true
-                biribiri:CreateAndStartTimer(0.5, function()
-                    currentMedia = 1
-                    fading = false
-                    playyan.Visible = true
+                biribiri:CreateAndStartTimer(1, function ()
+                    UnrootMedia(media)
+                    GetMediaFolder()[currentMedia].isRoot = true
 
-                    backdoor.X = 121 - 50
-                    backdoor.Y = 58 - 50 
-                    
-                    playyan.X = backdoor.X + 20
-                    playyan.Y = backdoor.Y + 22
-                    
-                    camera.X = 0
-                    camera.Y = 0
-                    
-                    biribiri:CreateAndStartTimer(0.7, function ()
-                        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X + stairWidth + 6}):Play()
-                        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadOut), {Y = playyan.Y - 20}):Play()
-                        playyan.Sprite = "img/yan_jump.png"
-                        biribiri:CreateAndStartTimer(jumpSpeed, function ()
-                            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 48}):Play()
-                        end)
+                    fading = true
+                    backdoor.Visible = true
+                    biribiri:CreateAndStartTimer(0.5, function()
+                        currentMedia = 1
+                        fading = false
+                        playyan.Visible = true
+
+                        backdoor.X = 121 - 50
+                        backdoor.Y = 58 - 50 
                         
-                        biribiri:CreateAndStartTimer(jumpSpeed / 0.5, function ()
-                            playyan.Sprite = "img/yan_stand.png"
-                            playyan.Moving = false
+                        playyan.X = backdoor.X + 20
+                        playyan.Y = backdoor.Y + 22
+                        
+                        camera.X = 0
+                        camera.Y = 0
+                        
+                        biribiri:CreateAndStartTimer(0.7, function ()
+                            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X + stairWidth + 6}):Play()
+                            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadOut), {Y = playyan.Y - 20}):Play()
+                            playyan.Sprite = "img/yan_jump.png"
+                            biribiri:CreateAndStartTimer(jumpSpeed, function ()
+                                yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 48}):Play()
+                            end)
+                            
+                            biribiri:CreateAndStartTimer(jumpSpeed / 0.5, function ()
+                                playyan.Sprite = "img/yan_stand.png"
+                                playyan.Moving = false
+                            end)
                         end)
                     end)
                 end)
-            end)
+            end
         end
     elseif key == "w" then
-        if isPlaying then
-            adjustingVolume = true
-            volume = volume + 1
-            hideVolumeTimer.Started = false
-            hideVolumeTimer:Start()
-            
-            if currentSong ~= nil then
-                currentSong:setVolume(volume / 27)
+        if scene == "menu" then
+            if menuSelection == 2 then
+                menuSelection = 1
+                assets["sfx/blip.mp3"]:play()
+                yan:NewTween(menuBird, yan:TweenInfo(0.5, EasingStyle.CircularOut), {Y = 48}):Play()
             end
-            
-
-            return
         end
-        if backdoor.Visible == false then return end
-        if playyan.Moving then return end
-        assets["sfx/blip.mp3"]:play()
-        playyan.Moving = true
-        playyan.Direction = -1
-        
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X - stairWidth - 7}):Play()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadOut), {Y = playyan.Y - 48}):Play()
 
-        biribiri:CreateAndStartTimer(jumpSpeed, function ()
-            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 20}):Play()
-        end)
-        
-        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.3, function ()
-            playyan.Visible = false
-            backdoor.Whoosh = true
-        end)
-        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.4, function ()
-            backdoor.Whoosh = false
-        end)
-        biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.5, function ()
-            fading = true
-            UnrootMedia(media)
-            
-            biribiri:CreateAndStartTimer(0.5, function ()
-                playyan.Visible = true
-                playyan.Moving = false
-                backdoor.Visible = false
-                backdoor.Whoosh = false
-                fading = false
+        if scene == "music" then
+            if isPlaying then
+                adjustingVolume = true
+                volume = volume + 1
+                hideVolumeTimer.Started = false
+                hideVolumeTimer:Start()
                 
-                media[folderIndex].sprite = "img/door_open.png"
+                if currentSong ~= nil then
+                    currentSong:setVolume(volume / 27)
+                end
                 
-                currentMedia = folderIndex
-                
-                playyan.X = 121 + (stairWidth * (folderIndex - 1))
-                playyan.Y = 58 - (stairHeight * (folderIndex - 1))
-                
-                camera.X = 0 - (stairWidth * (folderIndex - 1))
-                camera.Y = 0 + (stairHeight * (folderIndex - 1))
-            end)
-            
-            biribiri:CreateAndStartTimer(0.7, function ()
-                media[folderIndex].sprite = "img/door.png"
-            end)
-        end)
-    elseif key == "s" then
-        if isPlaying then
-            adjustingVolume = true
-            volume = volume - 1
-            hideVolumeTimer.Started = false
-            hideVolumeTimer:Start()
 
-            if currentSong ~= nil then
-                currentSong:setVolume(volume / 27)
+                return
             end
-            return
+            if backdoor.Visible == false then return end
+            if playyan.Moving then return end
+            assets["sfx/blip.mp3"]:play()
+            playyan.Moving = true
+            playyan.Direction = -1
+            
+            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 0.5, EasingStyle.Linear), {X = playyan.X - stairWidth - 7}):Play()
+            yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadOut), {Y = playyan.Y - 48}):Play()
+
+            biribiri:CreateAndStartTimer(jumpSpeed, function ()
+                yan:NewTween(playyan, yan:TweenInfo(jumpSpeed, EasingStyle.QuadIn), {Y = playyan.Y + 20}):Play()
+            end)
+            
+            biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.3, function ()
+                playyan.Visible = false
+                backdoor.Whoosh = true
+            end)
+            biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.4, function ()
+                backdoor.Whoosh = false
+            end)
+            biribiri:CreateAndStartTimer(jumpSpeed / 0.5 + 0.5, function ()
+                fading = true
+                UnrootMedia(media)
+                
+                biribiri:CreateAndStartTimer(0.5, function ()
+                    playyan.Visible = true
+                    playyan.Moving = false
+                    backdoor.Visible = false
+                    backdoor.Whoosh = false
+                    fading = false
+                    
+                    media[folderIndex].sprite = "img/door_open.png"
+                    
+                    currentMedia = folderIndex
+                    
+                    playyan.X = 121 + (stairWidth * (folderIndex - 1))
+                    playyan.Y = 58 - (stairHeight * (folderIndex - 1))
+                    
+                    camera.X = 0 - (stairWidth * (folderIndex - 1))
+                    camera.Y = 0 + (stairHeight * (folderIndex - 1))
+                end)
+                
+                biribiri:CreateAndStartTimer(0.7, function ()
+                    media[folderIndex].sprite = "img/door.png"
+                end)
+            end)
+        end
+    elseif key == "s" then
+        if scene == "menu" then
+            if menuSelection == 1 then
+                menuSelection = 2
+                assets["sfx/blip.mp3"]:play()
+                yan:NewTween(menuBird, yan:TweenInfo(0.5, EasingStyle.CircularOut), {Y = 68}):Play()
+            end
+        end
+        if scene == "music" then
+            if isPlaying then
+                adjustingVolume = true
+                volume = volume - 1
+                hideVolumeTimer.Started = false
+                hideVolumeTimer:Start()
+                
+                if currentSong ~= nil then
+                    currentSong:setVolume(volume / 27)
+                end
+                return
+            end
         end
     elseif key == "z" then
-        if isPlaying then
-            playbackMode = playbackMode + 1
-            if playbackMode == 5 then
-                playbackMode = 1
+        if scene == "music" then
+            if isPlaying then
+                playbackMode = playbackMode + 1
+                if playbackMode == 5 then
+                    playbackMode = 1
+                end
             end
         end
     end
@@ -486,6 +598,8 @@ end
 function love.update(dt)
     yan:Update(dt)
     biribiri:Update(dt)
+    birds:Update(dt)
+    clouds:Update(dt)
     
     speechBubble.X = playyan.X - 12
     speechBubble.Y = playyan.Y - 9
@@ -495,9 +609,26 @@ function love.update(dt)
     else
         speechBubble.Sprite = "img/speech_note.png"
     end
-
+    
     if currentSong ~= nil then
         currentSong:setLooping(playbackMode == 2)
+        
+        if love.keyboard.isDown("left") then
+            if love.keyboard.isDown("lshift") then
+                currentSong:seek(currentSong:tell() - dt * 18)
+            else
+                currentSong:seek(currentSong:tell() - dt * 6)
+            end
+            
+        elseif love.keyboard.isDown("right") then
+            if love.keyboard.isDown("lshift") then
+                currentSong:seek(currentSong:tell() + dt * 18)
+            else
+                currentSong:seek(currentSong:tell() + dt * 6)
+            end
+        end
+
+        
 
         if currentSong:tell() >= currentSong:getDuration() - 0.1 then
             if playbackMode == 1 then
@@ -534,123 +665,175 @@ end
 function love.draw()
     love.graphics.push()
     love.graphics.scale(3, 3)
-    love.graphics.translate(camera.X, camera.Y)
-    if fading then
-        love.graphics.pop()
-        return
-    end
-    if isPlaying and currentSong ~= nil then
-        stars:Draw(camera.X, camera.Y)
-    end
-    
-    if #GetMediaFolder() > 0 then
-        love.graphics.setColor(0,0,0.8)
-        love.graphics.rectangle("fill", 
-        10 + ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairWidth) + stairWidth + 5, 
-        height - ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairHeight) - 34, 500, stairHeight)
-        love.graphics.setColor(0,1,1)
-    end
     
     
-    
-    for i = -10, 100 do
-        love.graphics.line(
-            stairXOffset + ((i - 1) * stairWidth), 
-            height - ((i - 1) * stairHeight), 
-            stairXOffset + ((i - 1) * stairWidth), 
-            height - stairHeight - ((i - 1) * stairHeight)
-        )
-        love.graphics.line(
-            stairXOffset + ((i - 1) * stairWidth), 
-            height - stairHeight - ((i - 1) * stairHeight), 
-            stairXOffset + stairWidth + ((i - 1) * stairWidth), 
-            height - stairHeight - ((i - 1) * stairHeight)
-        )
-    end
-    love.graphics.setColor(1,1,1)
-
-    local m = GetMediaFolder()
-    
-    for i, file in ipairs(m) do
-        love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
-        
-        love.graphics.print(file.name, 15 + ((i + 2) * stairWidth) + stairWidth + 5, height - ((i + 2) * stairHeight) - 33)
-    end
-    
-   
-    
-    if backdoor.Visible then
-        love.graphics.draw(assets["img/backdoor_"..tostring(backdoor.Index)..".png"], backdoor.X + 6, backdoor.Y + 8)
-
-        if backdoor.Whoosh == true then
-            love.graphics.draw(assets["img/backdoor_whoosh.png"], backdoor.X + 6, backdoor.Y + 8)
-        end
-        
-        love.graphics.draw(assets["img/guy.png"], 7 + ((#m + 6) * stairWidth), height - ((#m + 6) * stairHeight) - 33)
-    end
-    
-    
-
-    
-    if playyan.Visible then
-        love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
-    end
-    if #GetMediaFolder() > 0 then
-        love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
-        love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
-    end
-    
-    if speechBubble.Visible and (not playyan.Moving and isPlaying) then
-        love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
-    end
-    
-    
-
-    if adjustingVolume then
-        local extraSize = 0
-        
-        for i = 1, volume do
-            if i % 3 == 0 then
-                extraSize = extraSize + 1
-            end
-        end
-        
-        print(extraSize, volume)
-        love.graphics.draw(assets["img/volume.png"], 2 - camera.X, 30 - camera.Y)
-        love.graphics.setColor(0,0,0)
-        love.graphics.rectangle("fill", 5 - camera.X, 46 - camera.Y, 4, -volume - extraSize + 47)
+    if scene == "loading" then
         love.graphics.setColor(1,1,1)
-    end
+        love.graphics.draw(assets["img/loading_screen.png"], 0, 0)
+        if loadingbird.Flapping then
+            love.graphics.draw(assets["img/loadingbird_"..birdStages[birdStage]..".png"], loadingbird.X, loadingbird.Y)
+        else
+            love.graphics.draw(assets[loadingbird.Sprite], loadingbird.X, loadingbird.Y)
+        end
+
+        if loadingYanBlink then
+            love.graphics.draw(assets["img/loadingyan_blink.png"], 0, 0)
+        end
+        love.graphics.setColor(0,0,0)
+        love.graphics.print("Press any key to skip loading", 44, 140)
+    elseif scene == "menu" then
+        clouds:Draw()
+        birds:Draw()
+        love.graphics.draw(assets["img/menubird_"..tostring(menuBirdAnim[menuBird.AnimState])..".png"], menuBird.X, menuBird.Y + menuBird.GetYOffset(menuBird.AnimState))
+        love.graphics.draw(assets["img/menu_overlay.png"], 0, 0)
+        
+        if menuSelection == 1 then
+            love.graphics.setColor(136/255, 187/255, 240/255)
+            love.graphics.print("Video", 126, 55)
+            love.graphics.setColor(1,1,1)
+            love.graphics.print("Video", 125, 55)           
+        else
+            love.graphics.setColor(136/255, 187/255, 240/255)
+            love.graphics.print("Video", 125, 55)
+        end
+        
+        
+        if menuSelection == 2 then
+            love.graphics.setColor(136/255, 187/255, 240/255)
+            love.graphics.print("Music", 126, 75)
+            love.graphics.setColor(1,1,1)
+            love.graphics.print("Music", 125, 75)
+        else
+            love.graphics.setColor(136/255, 187/255, 240/255)
+            love.graphics.print("Music", 125, 75)
+        end
+        
+        love.graphics.setColor(1,1,1)
     
-    if isPlaying and currentSong ~= nil then
-        love.graphics.draw(assets["img/"..playbackState..(isDarkened and "_darkened.png" or ".png")], 30 - camera.X, 60 - camera.Y)
-        
-        love.graphics.draw(assets["img/bottom_gradient.png"], 0 - camera.X, height - 50 - camera.Y, 0, 2, 1)
-        
-        local seconds = math.floor(currentSong:tell("seconds") % 60)
-        if seconds < 10 then
-            seconds = "0"..tostring(seconds)
+    elseif scene == "music" then
+        love.graphics.translate(camera.X, camera.Y)
+        if fading then
+            love.graphics.pop()
+            return
         end
-
-        local minutes = math.floor(currentSong:tell("seconds") / 60)
-        if minutes < 10 then
-            minutes = "0"..tostring(minutes)
+        if isPlaying and currentSong ~= nil then
+            stars:Draw(camera.X, camera.Y)
         end
         
-        local hours = math.floor(currentSong:tell("seconds") / 3600 )-- dude whos listening to hour long audio on my playyan media player
-        if hours < 10 then
-            hours = "0"..tostring(hours)
+        if #GetMediaFolder() > 0 then
+            love.graphics.setColor(0,0,0.8)
+            love.graphics.rectangle("fill", 
+            10 + ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairWidth) + stairWidth + 5, 
+            height - ((math.clamp(currentMedia, 1, #GetMediaFolder()) + 2) * stairHeight) - 34, 500, stairHeight)
+            love.graphics.setColor(0,1,1)
         end
         
-        love.graphics.printf(hours..":"..minutes..":"..seconds, width - 105 - camera.X, 98 - camera.Y, 100, "right")
         
-        love.graphics.draw(assets[flashProgress and "img/progress_flash.png" or "img/progress.png"], (width * (currentSong:tell("seconds") / currentSong:getDuration("seconds"))) - camera.X, height - 51 - camera.Y )
         
-        love.graphics.draw(assets["img/car.png"], car.X - camera.X, height - 8 - camera.Y)
-        love.graphics.draw(assets["img/fish.png"], fish.X - camera.X, height - 40 - camera.Y)
-
-        love.graphics.draw(assets["img/playback_"..playbackModes[playbackMode]..".png"], 2 - camera.X, 98 - camera.Y)
+        for i = -10, 100 do
+            love.graphics.line(
+                stairXOffset + ((i - 1) * stairWidth), 
+                height - ((i - 1) * stairHeight), 
+                stairXOffset + ((i - 1) * stairWidth), 
+                height - stairHeight - ((i - 1) * stairHeight)
+            )
+            love.graphics.line(
+                stairXOffset + ((i - 1) * stairWidth), 
+                height - stairHeight - ((i - 1) * stairHeight), 
+                stairXOffset + stairWidth + ((i - 1) * stairWidth), 
+                height - stairHeight - ((i - 1) * stairHeight)
+            )
+        end
+        love.graphics.setColor(1,1,1)
+    
+        local m = GetMediaFolder()
+        
+        for i, file in ipairs(m) do
+            love.graphics.draw(assets[file.sprite], 15 + ((i + 3) * stairWidth), height - ((i + 3) * stairHeight) - 39)
+            
+            love.graphics.print(file.name, 15 + ((i + 2) * stairWidth) + stairWidth + 5, height - ((i + 2) * stairHeight) - 33)
+        end
+        
+       
+        
+        if backdoor.Visible then
+            love.graphics.draw(assets["img/backdoor_"..tostring(backdoor.Index)..".png"], backdoor.X + 6, backdoor.Y + 8)
+    
+            if backdoor.Whoosh == true then
+                love.graphics.draw(assets["img/backdoor_whoosh.png"], backdoor.X + 6, backdoor.Y + 8)
+            end
+            
+            love.graphics.draw(assets["img/guy.png"], 7 + ((#m + 6) * stairWidth), height - ((#m + 6) * stairHeight) - 33)
+        end
+        
+        
+    
+        
+        if playyan.Visible then
+            love.graphics.draw(assets[playyan.Sprite], playyan.X + 6, playyan.Y + 8, 0, playyan.Direction, 1, 6, 9)
+        end
+        if #GetMediaFolder() > 0 then
+            love.graphics.draw(assets["img/warp.png"], 15 + ((#m + 4) * stairWidth), height - ((#m + 4) * stairHeight) - 47)
+            love.graphics.draw(assets["img/warp_flip.png"], 15 + ((3) * stairWidth), height - ((3) * stairHeight) - 47)
+        end
+        
+        if speechBubble.Visible and (not playyan.Moving and isPlaying) then
+            love.graphics.draw(assets[speechBubble.Sprite], speechBubble.X, speechBubble.Y)
+        end
+        
+        
+    
+        if adjustingVolume then
+            local extraSize = 0
+            
+            for i = 1, volume do
+                if i % 3 == 0 then
+                    extraSize = extraSize + 1
+                end
+            end
+            
+            print(extraSize, volume)
+            love.graphics.draw(assets["img/volume.png"], 2 - camera.X, 30 - camera.Y)
+            love.graphics.setColor(0,0,0)
+            love.graphics.rectangle("fill", 5 - camera.X, 46 - camera.Y, 4, -volume - extraSize + 47)
+            love.graphics.setColor(1,1,1)
+        end
+        
+        if isPlaying and currentSong ~= nil then
+            love.graphics.draw(assets["img/"..playbackState..(isDarkened and "_darkened.png" or ".png")], 30 - camera.X, 60 - camera.Y)
+            
+            love.graphics.draw(assets["img/bottom_gradient.png"], 0 - camera.X, height - 50 - camera.Y, 0, 2, 1)
+            
+            local seconds = math.floor(currentSong:tell("seconds") % 60)
+            if seconds < 10 then
+                seconds = "0"..tostring(seconds)
+            end
+    
+            local minutes = math.floor(currentSong:tell("seconds") / 60)
+            if minutes < 10 then
+                minutes = "0"..tostring(minutes)
+            end
+            
+            local hours = math.floor(currentSong:tell("seconds") / 3600 )-- dude whos listening to hour long audio on my playyan media player
+            if hours < 10 then
+                hours = "0"..tostring(hours)
+            end
+            
+            love.graphics.printf(hours..":"..minutes..":"..seconds, width - 105 - camera.X, 98 - camera.Y, 100, "right")
+            
+            love.graphics.draw(assets[flashProgress and "img/progress_flash.png" or "img/progress.png"], (width * (currentSong:tell("seconds") / currentSong:getDuration("seconds"))) - camera.X, height - 51 - camera.Y )
+            
+            love.graphics.draw(assets["img/car.png"], car.X - camera.X, height - 8 - camera.Y)
+            love.graphics.draw(assets["img/fish.png"], fish.X - camera.X, height - 40 - camera.Y)
+    
+            love.graphics.draw(assets["img/playback_"..playbackModes[playbackMode]..".png"], 2 - camera.X, 98 - camera.Y)
+        end
     end
+
+    love.graphics.setColor(0,0,0,fade.Alpha)
+    love.graphics.rectangle("fill", 0, 0, 1000, 1000)
+    love.graphics.setColor(1,1,1,1)
+    
     
     love.graphics.pop()
 end
