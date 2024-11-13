@@ -193,7 +193,6 @@ local function LoadSpriteFolder(directory)
             end)
 
             if status == true then
-                print(v, sprite)
                 assets[directory.."/"..v] = sprite
             end
         elseif info.type == "directory" then
@@ -214,7 +213,6 @@ local function LoadAudioFolder(directory, sourceType)
             end)
             
             if status == true then
-                print(v, source)
                 assets[directory.."/"..v] = source
             end
         elseif info.type == "directory" then
@@ -236,7 +234,6 @@ local function LoadFontFolder(directory, size)
             end)
             
             if status == true then
-                print(v, font)
                 assets[directory.."/"..v] = font
             end
         elseif info.type == "directory" then
