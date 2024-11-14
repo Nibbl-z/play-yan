@@ -10,7 +10,7 @@ require "biribiri"
 local overrideShowControls = false
 local flashProgress = false
 local playbackState = "play"
-local adjustingVolume = false
+local adjustingVolumeV = false
 
 function videoplayback:Initialize()
     -- Flash progress bar
@@ -21,8 +21,8 @@ function videoplayback:Initialize()
         end)
     end, true)
 
-    hideVolumeTimer = biribiri:CreateTimer(2, function ()
-        adjustingVolume = false
+    hideVolumeTimerV = biribiri:CreateTimer(2, function ()
+        adjustingVolumeV = false
     end)
 end
 
@@ -63,19 +63,19 @@ function videoplayback:KeyPressed(key)
         end
     elseif key == "w" then     
         if Video.videos[Video.currentMedia].video:getSource() ~= nil then
-            adjustingVolume = true
+            adjustingVolumeV = true
             common.Volume = math.clamp(common.Volume + 1, 0, 36)
-            hideVolumeTimer.Started = false
-            hideVolumeTimer:Start()
+            hideVolumeTimerV.Started = false
+            hideVolumeTimerV:Start()
             
             Video.videos[Video.currentMedia].video:getSource():setVolume(common.Volume / 36)
         end
     elseif key == "s" then
         if Video.videos[Video.currentMedia].video:getSource() ~= nil then
-            adjustingVolume = true
+            adjustingVolumeV = true
             common.Volume = math.clamp(common.Volume - 1, 0, 36)
-            hideVolumeTimer.Started = false
-            hideVolumeTimer:Start()
+            hideVolumeTimerV.Started = false
+            hideVolumeTimerV:Start()
             
             Video.videos[Video.currentMedia].video:getSource():setVolume(common.Volume / 36)
         end
@@ -114,7 +114,7 @@ function videoplayback:Draw()
     
     love.graphics.draw(video, (240 - (vw * bestRatio)) / 2, (160 - (vh * bestRatio)) / 2, 0, bestRatio, bestRatio, 0, 0)
     
-    if adjustingVolume then
+    if adjustingVolumeV then
         local extraSize = 0
         for i = 1, common.Volume do
             if i % 3 == 0 then
