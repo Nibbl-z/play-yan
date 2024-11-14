@@ -20,7 +20,8 @@ local selectionAnimFrame = 1
 local arrowState = {
     next = "", prev = "", show = true
 }
-
+local hideSelect = false
+Video.stopAutoplay = false
 
 function Video:LoadVideoFolder()
     local files = {}
@@ -115,9 +116,11 @@ function Video:NextVideoPage()
     biribiri:CreateAndStartTimer(0.6, function ()
         arrowState.show = true
         for i, video in ipairs(self.videos) do
-            biribiri:CreateAndStartTimer(0.1 * i - (0.6 * (videoPage - 1)), function ()
-                video.openDoor(video)
-            end)
+            if i >= (videoPage - 1) * 6 and i <= (videoPage - 1) * 6 + 6 then
+                biribiri:CreateAndStartTimer(0.1 * i - (0.6 * (videoPage - 1)), function ()
+                    video.openDoor(video)
+                end)
+            end
         end
     end)
 end
@@ -136,9 +139,11 @@ function Video:PreviousVideoPage()
     biribiri:CreateAndStartTimer(0.6, function ()
         arrowState.show = true
         for i, video in ipairs(self.videos) do
-            biribiri:CreateAndStartTimer(0.1 * i - (0.6 * (videoPage - 1)), function ()
-                video.openDoor(video)
-            end)
+            if i >= (videoPage - 1) * 6 and i <= (videoPage - 1) * 6 + 6 then
+                biribiri:CreateAndStartTimer(0.1 * i - (0.6 * (videoPage - 1)), function ()
+                    video.openDoor(video)
+                end)
+            end
         end
     end)
 end
@@ -179,6 +184,26 @@ function Video:Initialize()
 end
 
 function Video:KeyPressed(key)
+    if key == "escape" then
+        Blip()
+        hideSelect = true
+        for _, video in ipairs(self.videos) do
+            video.closeDoor(video)
+        end
+        
+        yan:NewTween(common.Fade, yan:TweenInfo(0.5), {Alpha = 1}):Play()
+
+        biribiri:CreateAndStartTimer(0.5, function ()
+            yan:NewTween(common.Fade, yan:TweenInfo(0.5), {Alpha = 0}):Play()
+            hideSelect = false
+            videoPage = 1
+            self.currentMedia = 1
+            common.Camera.Y = 0
+            common.Scene = "menu"
+            MenuEnter()
+        end)
+    end
+
     if key == "a" then
         if math.ceil(self.currentMedia / 6) ~= math.ceil((math.clamp(self.currentMedia - 1, 1, #self.videos) - 1) / 6 + 0.01) then
             self:PreviousVideoPage()
@@ -216,6 +241,7 @@ function Video:KeyPressed(key)
     end
 
     if key == "space" then
+        self.stopAutoplay = false
         Blip()
         common.ToggleRendering = true
         self.videos[self.currentMedia].video = love.graphics.newVideo("video/"..self.videos[self.currentMedia].name)
@@ -226,11 +252,13 @@ function Video:KeyPressed(key)
         end)
         
         biribiri:CreateAndStartTimer(1.5, function ()
+            if self.stopAutoplay then return end
             yan:NewTween(common.Fade, yan:TweenInfo(1), {Alpha = 1}):Play()
         end)
 
         biribiri:CreateAndStartTimer(2.51, function ()
             common.Fade.Alpha = 0
+            if self.stopAutoplay then return end
             self.videos[self.currentMedia].video:play()
             self.videos[self.currentMedia].canControl = true
         end)
@@ -242,6 +270,12 @@ function Video:Draw()
     
     local pages = math.ceil(#self.videos / 6)
     for i, video in ipairs(self.videos) do
+        for i = 1, pages do
+            if arrowState.show then
+                love.graphics.draw(assets["img/exit.png"], 209, 146 + (i - 1) * 300)
+            end
+        end
+
         if pages > 1 and arrowState.show then
             if videoPage < pages then
                 for i = 1, pages do
@@ -256,7 +290,7 @@ function Video:Draw()
             end
         end
         
-        if self.currentMedia ~= i or arrowState.show == false then
+        if self.currentMedia ~= i or arrowState.show == false or hideSelect then
             love.graphics.draw(assets[video.sprite], positions[i].X, positions[i].Y)
         else
             love.graphics.draw(assets["img/video_selected"..tostring(selectionAnimFrame)..".png"], positions[i].X, positions[i].Y)
@@ -265,7 +299,7 @@ function Video:Draw()
         love.graphics.setColor(1,1,1)
         love.graphics.draw(video.video, positions[i].X + 3, positions[i].Y + 18, 0, 60/vw, 40/vh)
 
-        if self.currentMedia ~= i or arrowState.show == false then
+        if self.currentMedia ~= i or arrowState.show == false or hideSelect then
             love.graphics.setColor(46/255, 101/255, 122/255)
         else
             love.graphics.setColor(112/255, 214/255, 241/255)

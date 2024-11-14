@@ -25,7 +25,9 @@ function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     love.graphics.setFont(love.graphics.newFont("W95FA.otf", 14, "mono"))
     love.window.setMode(720, 480)
-    
+
+    love.filesystem.write("music/sample_music.mp3", love.filesystem.read("samples/sample_music.mp3"))
+    love.filesystem.write("video/sample_movie.ogv", love.filesystem.read("samples/sample_movie.ogv"))
     biribiri:LoadAudio("music", "stream")
     biribiri:LoadAudio("sfx", "static")
     biribiri:LoadSprites("img")
@@ -57,8 +59,7 @@ function love.draw()
     love.graphics.push()
     love.graphics.scale(3, 3)
 
-     scenes[common.Scene]:Draw()
-
+    scenes[common.Scene]:Draw()
     
     love.graphics.setColor(0,0,0,common.Fade.Alpha)
     love.graphics.rectangle("fill", 0, 0, 1000, 1000)

@@ -14,7 +14,7 @@ function FinishLoading()
     yan:NewTween(common.Fade, yan:TweenInfo(0.5), {Alpha = 1}):Play()
     biribiri:CreateAndStartTimer(0.5, function ()
         common.Scene = "menu"
-        
+        MenuEnter()
         yan:NewTween(common.Fade, yan:TweenInfo(0.5), {Alpha = 0}):Play()
     end)
 end

@@ -21,9 +21,18 @@ local bird = {
     end
 }
 
+function MenuEnter()
+    bird.X = -20
+    bird.Y = 10
+
+    if selection == 1 then
+        yan:NewTween(bird, yan:TweenInfo(0.7, EasingStyle.CircularOut), {X = 85, Y = 48}):Play()
+    else
+        yan:NewTween(bird, yan:TweenInfo(0.7, EasingStyle.CircularOut), {X = 85, Y = 68}):Play()
+    end
+end
+
 function menu:Initialize()
-    yan:NewTween(bird, yan:TweenInfo(0.7, EasingStyle.CircularOut), {X = 85, Y = 48}):Play()
-    
     -- Loop through bird flapping animation
     biribiri:CreateAndStartTimer(0.06, function ()
         bird.AnimationFrame = bird.AnimationFrame + 1
@@ -93,8 +102,7 @@ function menu:KeyPressed(key)
             elseif selection == 2 then
                 common.Scene = "music"
             end
-            
-            selection = 1
+
             common.Fade.Alpha = 0
         end)
     end

@@ -2,6 +2,7 @@ local videoplayback = {}
 
 local common = require("common")
 local Video = require("scenes.video")
+local playbackTime = require("objects.playbacktime")
 
 require "yan"
 require "biribiri"
@@ -9,6 +10,7 @@ require "biribiri"
 local overrideShowControls = false
 local flashProgress = false
 local playbackState = "play"
+local adjustingVolume = false
 
 function videoplayback:Initialize()
     -- Flash progress bar
@@ -18,6 +20,10 @@ function videoplayback:Initialize()
             flashProgress = false
         end)
     end, true)
+
+    hideVolumeTimer = biribiri:CreateTimer(2, function ()
+        adjustingVolume = false
+    end)
 end
 
 function videoplayback:KeyReleased(key)
@@ -36,6 +42,7 @@ end
 
 function videoplayback:KeyPressed(key)
     if key == "escape" then
+        Video.stopAutoplay = true
         Video.videos[Video.currentMedia].video:pause()
         
         common.Scene = "video"
@@ -125,6 +132,7 @@ function videoplayback:Draw()
         love.graphics.draw(assets["img/video_progress.png"])
         love.graphics.draw(assets[flashProgress and "img/progressvideo_flash.png" or "img/progressvideo.png"], 5 + 224 * (video:tell() / video:getSource():getDuration()), 152)
         love.graphics.draw(assets["img/"..playbackState.."_video.png"], 108, 66)
+        playbackTime:Render(video:tell(), 207, 144)
     end
 end
 
