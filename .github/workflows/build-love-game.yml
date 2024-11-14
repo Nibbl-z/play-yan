@@ -25,7 +25,7 @@ jobs:
         mv game.love ${GITHUB_REPOSITORY#*/}-$(date +%Y%m%d%H%M%S).love
 
     - name: Upload .love file as artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: .LOVE file
         path: |
@@ -37,7 +37,7 @@ jobs:
 
     steps:
     - name: Download .love file from previous job
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: .LOVE file
         path: .
@@ -61,7 +61,7 @@ jobs:
         cp love/*.dll .
 
     - name: Upload .exe file as artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: Game Build
         path: |
