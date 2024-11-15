@@ -291,7 +291,7 @@ end
 
 function music:Initialize()
     LoadMusicFolder("music")
-
+    
     stars:Init() -- bbbring out the stars
 
     -- When Play-Yan lands
@@ -316,16 +316,20 @@ function music:Initialize()
             playyan.Visible = false
             biribiri:CreateAndStartTimer(0.5, WarpUp)
         end
+
+        biribiri:CreateAndStartTimer(0.02, function ()
+            playyan.Y = 58 - (currentMedia - 1) * stairHeight
+        end)
     end)
     
     -- Animations for Play-Yan falling down when going up or down on stairs
-    yanUpTimer = biribiri:CreateTimer(jumpSpeed / 1.9, function ()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2.2, EasingStyle.QuadOut), {Y = playyan.Y + 30 - stairHeight}):Play()
+    yanUpTimer = biribiri:CreateTimer(jumpSpeed / 1.7, function ()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 3, EasingStyle.QuadOut), {Y = playyan.Y + 30 - stairHeight}):Play()
         playbackState = "play"
     end)
     
-    yanDownTimer = biribiri:CreateTimer(jumpSpeed / 1.9, function ()
-        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 2.2, EasingStyle.QuadOut), {Y = playyan.Y + 10 + stairHeight}):Play()
+    yanDownTimer = biribiri:CreateTimer(jumpSpeed / 1.7, function ()
+        yan:NewTween(playyan, yan:TweenInfo(jumpSpeed / 3, EasingStyle.QuadOut), {Y = playyan.Y + 10 + stairHeight}):Play()
         playbackState = "play"
     end)
     
@@ -799,7 +803,7 @@ function music:Draw()
     
     
     
-    for i = -10, 10000 do
+    for i = -10, #GetMediaFolder() + 10 do
         love.graphics.line(
             stairXOffset + ((i - 1) * stairWidth), 
             height - ((i - 1) * stairHeight), 

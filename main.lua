@@ -54,7 +54,7 @@ function love.update(dt)
     end)
 end
 
-function love.draw()
+function love.draw()  
     if common.ToggleRendering then return end
     love.graphics.push()
     love.graphics.scale(3, 3)
