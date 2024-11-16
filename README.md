@@ -6,6 +6,10 @@ Music is stored in AppData > play-yan > music. They must be in mp3, wav, or ogg 
 
 Videos are stored in AppData > play-yan > video. They must be in ogv format. Yeah, this is a weird format that I don't think many people use, but it's the only thing that Love2D supports... sorry! Also, folders will not work here.
 
+# Download:
+
+You can find the game in the [releases tab](https://github.com/Nibbl-z/play-yan/releases/tag/v2.0.0) or on [the itch.io page.](https://nibbl-z.itch.io/play-yan) Unzip it and run the .exe. It's that simple!
+
 # Controls
 
 ### Main Menu
